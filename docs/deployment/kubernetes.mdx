@@ -1,0 +1,23 @@
+# Kubernetes
+
+Deploy AuthKit with the Helm chart in `deploy/helm/authkit`.
+
+## Install
+
+```bash
+helm upgrade --install authkit deploy/helm/authkit \
+  --set image.repository=ghcr.io/authkit/server \
+  --set image.tag=latest \
+  --set secrets.databaseUrl=\"postgres://...\" \
+  --set secrets.redisUrl=\"redis://...\" \
+  --set secrets.jwtPrivateKey=\"...\" \
+  --set secrets.jwtPublicKey=\"...\" \
+  --set secrets.encryptionKey=\"...\" \
+  --set secrets.hmacSecret=\"...\"
+```
+
+## Notes
+
+- Readiness probes target `/ready`.
+- Liveness probes target `/health`.
+- Enable ingress and autoscaling via `values.yaml`.

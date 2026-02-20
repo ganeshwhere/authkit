@@ -1,0 +1,48 @@
+image:
+  repository: ghcr.io/authkit/server
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+service:
+  type: ClusterIP
+  port: 3001
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: authkit.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+env:
+  nodeEnv: production
+  logLevel: info
+  baseUrl: https://auth.example.com
+
+secrets:
+  databaseUrl: ""
+  redisUrl: ""
+  jwtPrivateKey: ""
+  jwtPublicKey: ""
+  encryptionKey: ""
+  hmacSecret: ""
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70

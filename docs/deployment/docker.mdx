@@ -1,0 +1,17 @@
+# Docker
+
+Use the compose files in `docker/` for self-hosted runtime.
+
+## Production-like stack
+
+```bash
+docker compose -f docker/docker-compose.yml up -d
+```
+
+## Development stack
+
+```bash
+docker compose -f docker/docker-compose.dev.yml up -d postgres redis authkit
+```
+
+Set all required environment values in `.env` before starting the stack.

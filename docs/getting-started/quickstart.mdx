@@ -1,0 +1,9 @@
+# Quickstart
+
+Get AuthKit running in under 10 minutes.
+
+1. Install dependencies with `pnpm install`.
+2. Start infrastructure with `docker compose -f docker/docker-compose.dev.yml up -d postgres redis`.
+3. Generate secrets with `pnpm --filter authkit-cli build && node tools/authkit/dist/index.js init-env`.
+4. Start server with `pnpm --filter @authkit/server dev`.
+5. Open dashboard at `http://localhost:3000`.

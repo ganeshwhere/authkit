@@ -1,0 +1,10 @@
+# Token Architecture
+
+AuthKit uses split token responsibilities:
+
+- Access tokens: RS256 JWTs, short-lived, validated by JWKS.
+- Refresh tokens: random 256-bit secrets, stored hashed in DB.
+- Rotation: each refresh invalidates the previous token.
+- Reuse detection: stale token replay revokes the full token family.
+
+This design keeps API authorization stateless while preserving strong session theft detection.

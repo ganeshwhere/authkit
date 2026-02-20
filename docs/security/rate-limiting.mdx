@@ -1,0 +1,10 @@
+# Rate Limiting
+
+AuthKit applies Redis-backed sliding window policies to sensitive routes:
+
+- Signup: 5 requests per IP per hour.
+- Signin: 10 requests per IP per 15 minutes.
+- Lockout: 5 failed password attempts per account per 15 minutes.
+- Refresh: 60 requests per session per hour.
+
+Tune limits by environment and monitor lockout events in audit logs.

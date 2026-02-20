@@ -1,0 +1,20 @@
+# REST API
+
+All routes are versioned under `/v1`.
+
+## Route groups
+
+- `/v1/auth/*` for sign up, sign in, refresh, magic link, MFA, OAuth, and passkeys.
+- `/v1/user/*` for profile and session controls.
+- `/v1/api/*` for server-to-server management operations.
+- `/.well-known/jwks.json`, `/health`, and `/ready` for platform integration.
+
+## Response envelope
+
+```json
+{ \"data\": {}, \"error\": null }
+```
+
+```json
+{ \"data\": null, \"error\": { \"code\": \"ERROR_CODE\", \"message\": \"...\", \"details\": {} } }
+```

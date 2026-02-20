@@ -1,0 +1,11 @@
+# Webhooks
+
+AuthKit signs webhook payloads with:
+
+`X-AuthKit-Signature: t=<unix_timestamp>,v1=<hmac_sha256>`
+
+Delivery behavior:
+
+- 5 attempts max with exponential backoff.
+- 5 second request timeout.
+- Delivery logs persisted for audit and replay diagnostics.

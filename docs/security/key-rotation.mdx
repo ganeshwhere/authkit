@@ -1,0 +1,15 @@
+# Key Rotation
+
+Use CLI helpers for rotation-safe key management:
+
+```bash
+authkit keys generate
+authkit keys rotate
+```
+
+Recommended process:
+
+1. Generate next key pair.
+2. Publish both current and previous keys via JWKS.
+3. Roll server instances with new private key.
+4. Remove old key after token grace period.
