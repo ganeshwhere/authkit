@@ -126,4 +126,92 @@ describe('AuthKitClient', () => {
       code: 'UNAUTHORIZED',
     })
   })
+
+  it('emits auth state updates and refreshes token when missing', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            user: {
+              id: 'user_1',
+              projectId: 'project_1',
+              email: 'user@example.com',
+              emailVerified: true,
+              displayName: 'User',
+              avatarUrl: null,
+              metadata: {},
+              bannedAt: null,
+              deletedAt: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+            accessToken: 'token_1',
+            session: {
+              id: 'session_1',
+              userId: 'user_1',
+              projectId: 'project_1',
+              tokenHash: 'hash',
+              tokenFamily: 'family',
+              ipAddress: null,
+              userAgent: null,
+              lastActiveAt: new Date().toISOString(),
+              expiresAt: new Date().toISOString(),
+              revokedAt: null,
+              createdAt: new Date().toISOString(),
+            },
+          },
+          error: null,
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            success: true,
+          },
+          error: null,
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          data: {
+            accessToken: 'token_2',
+            session: {
+              id: 'session_2',
+              userId: 'user_1',
+              projectId: 'project_1',
+              tokenHash: 'hash',
+              tokenFamily: 'family',
+              ipAddress: null,
+              userAgent: null,
+              lastActiveAt: new Date().toISOString(),
+              expiresAt: new Date().toISOString(),
+              revokedAt: null,
+              createdAt: new Date().toISOString(),
+            },
+          },
+          error: null,
+        }),
+      )
+
+    const client = new AuthKitClient({
+      projectId: 'project_1',
+      fetch: fetcher as never,
+    })
+
+    const signedInStates: boolean[] = []
+    const unsubscribe = client.onAuthStateChange((state) => {
+      signedInStates.push(state.isSignedIn)
+    })
+
+    await client.signIn('user@example.com', 'Password#123')
+    await client.signOut()
+    const token = await client.getAccessToken()
+
+    unsubscribe()
+
+    expect(token).toBe('token_2')
+    expect(signedInStates[0]).toBe(false)
+    expect(signedInStates.some((value) => value)).toBe(true)
+  })
 })

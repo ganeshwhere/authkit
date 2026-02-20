@@ -2,6 +2,8 @@ import {
   AuthKitError,
   toAuthKitError,
 } from './errors'
+import { AuthStateStore } from './session'
+import { MemoryTokenStorage } from './tokens'
 import type {
   APIResponseEnvelope,
   AuthKitConfig,
@@ -15,6 +17,7 @@ import type {
   SignUpOptions,
   SignUpResult,
   TOTPSetupResult,
+  TokenStorage,
   UpdateUserData,
   User,
   UserProfileResult,
@@ -73,10 +76,8 @@ export class AuthKitClient {
   private readonly config: Required<Pick<AuthKitConfig, 'projectId' | 'baseUrl'>> &
     Omit<AuthKitConfig, 'projectId' | 'baseUrl'>
   private readonly fetcher: typeof fetch
-
-  private user: User | null = null
-  private session: Session | null = null
-  private accessToken: string | null = null
+  private readonly tokenStorage: TokenStorage
+  private readonly authStateStore = new AuthStateStore()
 
   constructor(config: AuthKitConfig) {
     if (!config.projectId || config.projectId.trim().length === 0) {
@@ -96,32 +97,36 @@ export class AuthKitClient {
     }
 
     this.fetcher = resolvedFetch
+    this.tokenStorage = config.tokenStorage ?? new MemoryTokenStorage()
     this.config = {
       ...config,
       projectId: config.projectId,
       baseUrl: normalizeBaseUrl(config.baseUrl ?? 'https://api.authkit.dev'),
     }
+
+    this.authStateStore.setAccessToken(this.tokenStorage.getAccessToken())
   }
 
   getUser(): User | null {
-    return this.user
+    return this.authStateStore.getState().user
   }
 
   getSession(): Session | null {
-    return this.session
+    return this.authStateStore.getState().session
   }
 
   getAuthState(): AuthState {
-    return {
-      user: this.user,
-      session: this.session,
-      accessToken: this.accessToken,
-      isSignedIn: Boolean(this.user && this.accessToken),
-    }
+    return this.authStateStore.getState()
+  }
+
+  onAuthStateChange(callback: (state: AuthState) => void): () => void {
+    return this.authStateStore.subscribe(callback)
   }
 
   private requireAccessToken(): string {
-    if (!this.accessToken) {
+    const accessToken = this.tokenStorage.getAccessToken()
+
+    if (!accessToken) {
       throw new AuthKitError({
         code: 'UNAUTHORIZED',
         message: 'No active access token. Sign in first.',
@@ -129,7 +134,7 @@ export class AuthKitClient {
       })
     }
 
-    return this.accessToken
+    return accessToken
   }
 
   private updateAuthState(result: {
@@ -137,15 +142,17 @@ export class AuthKitClient {
     accessToken: string
     session?: Session
   }): void {
-    this.user = result.user
-    this.accessToken = result.accessToken
-    this.session = result.session ?? null
+    this.tokenStorage.setAccessToken(result.accessToken)
+    this.authStateStore.setAuthenticated({
+      user: result.user,
+      accessToken: result.accessToken,
+      session: result.session,
+    })
   }
 
   private clearAuthState(): void {
-    this.user = null
-    this.session = null
-    this.accessToken = null
+    this.tokenStorage.clearAccessToken()
+    this.authStateStore.clear()
   }
 
   private async request<T>(options: RequestOptions): Promise<T> {
@@ -300,7 +307,8 @@ export class AuthKitClient {
       })
     }
 
-    this.accessToken = accessToken
+    this.tokenStorage.setAccessToken(accessToken)
+    this.authStateStore.setAccessToken(accessToken)
 
     const profile = await this.request<UserProfileResult>({
       method: 'GET',
@@ -317,8 +325,8 @@ export class AuthKitClient {
       })
     }
 
-    this.user = profile.user
-    this.session = session
+    this.authStateStore.setUser(profile.user)
+    this.authStateStore.setSession(session)
 
     return {
       user: profile.user,
@@ -343,8 +351,9 @@ export class AuthKitClient {
       path: '/v1/auth/refresh',
     })
 
-    this.accessToken = result.accessToken
-    this.session = result.session
+    this.tokenStorage.setAccessToken(result.accessToken)
+    this.authStateStore.setAccessToken(result.accessToken)
+    this.authStateStore.setSession(result.session)
 
     return result
   }
@@ -379,7 +388,7 @@ export class AuthKitClient {
       },
     })
 
-    this.user = result.user
+    this.authStateStore.setUser(result.user)
     return result.user
   }
 
@@ -404,8 +413,8 @@ export class AuthKitClient {
       requiresAuth: true,
     })
 
-    this.user = profile.user
-    this.session = profile.sessions[0] ?? this.session
+    this.authStateStore.setUser(profile.user)
+    this.authStateStore.setSession(profile.sessions[0] ?? this.getSession())
 
     return profile
   }
@@ -418,7 +427,7 @@ export class AuthKitClient {
       body: data,
     })
 
-    this.user = result.user
+    this.authStateStore.setUser(result.user)
     return result.user
   }
 
@@ -531,6 +540,18 @@ export class AuthKitClient {
   }
 
   async getAccessToken(): Promise<string | null> {
-    return this.accessToken
+    const existingToken = this.tokenStorage.getAccessToken()
+
+    if (existingToken) {
+      this.authStateStore.setAccessToken(existingToken)
+      return existingToken
+    }
+
+    try {
+      const refreshed = await this.refreshSession()
+      return refreshed.accessToken
+    } catch {
+      return null
+    }
   }
 }

@@ -108,6 +108,12 @@ export type AuthState = {
   isSignedIn: boolean
 }
 
+export interface TokenStorage {
+  getAccessToken(): string | null
+  setAccessToken(token: string): void
+  clearAccessToken(): void
+}
+
 export type OAuthOptions = {
   redirectUrl?: string
   state?: string
@@ -120,4 +126,5 @@ export type AuthKitConfig = {
   baseUrl?: string
   fetch?: typeof fetch
   defaultHeaders?: Record<string, string>
+  tokenStorage?: TokenStorage
 }
