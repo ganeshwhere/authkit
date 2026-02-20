@@ -12,6 +12,7 @@ import {
 import type { DatabaseAdapter } from '../../types/adapters'
 import type { AuthKitDatabase } from '../../db'
 import {
+  auditLogs,
   oauthAccounts,
   passkeys,
   sessions,
@@ -19,6 +20,8 @@ import {
   userPasswords,
   users,
   verificationTokens,
+  webhookDeliveries,
+  webhookEndpoints,
 } from '../../db/schema'
 import type {
   AuditLog,
@@ -26,6 +29,8 @@ import type {
   Session,
   User,
   VerificationToken,
+  WebhookDelivery,
+  WebhookEndpoint,
 } from '../../../../packages/core/src/adapters/db'
 
 function mapUser(row: typeof users.$inferSelect): User {
@@ -84,6 +89,46 @@ function mapOAuthAccount(row: typeof oauthAccounts.$inferSelect): OAuthAccount {
     provider: row.provider,
     providerUserId: row.providerUserId,
     rawProfile: row.rawProfile,
+    createdAt: row.createdAt,
+  }
+}
+
+function mapAuditLog(row: typeof auditLogs.$inferSelect): AuditLog {
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    userId: row.userId,
+    event: row.event,
+    ipAddress: row.ipAddress,
+    userAgent: row.userAgent,
+    metadata: row.metadata,
+    createdAt: row.createdAt,
+  }
+}
+
+function mapWebhookEndpoint(row: typeof webhookEndpoints.$inferSelect): WebhookEndpoint {
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    url: row.url,
+    secret: row.secret,
+    events: row.events,
+    enabled: row.enabled,
+    createdAt: row.createdAt,
+  }
+}
+
+function mapWebhookDelivery(row: typeof webhookDeliveries.$inferSelect): WebhookDelivery {
+  return {
+    id: row.id,
+    endpointId: row.endpointId,
+    event: row.event,
+    payload: row.payload,
+    responseStatus: row.responseStatus,
+    responseBody: row.responseBody,
+    attempt: row.attempt,
+    deliveredAt: row.deliveredAt,
+    failedAt: row.failedAt,
     createdAt: row.createdAt,
   }
 }
@@ -515,7 +560,7 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
     await this.db.delete(passkeys).where(and(eq(passkeys.id, id), eq(passkeys.userId, userId)))
   }
 
-  async createAuditLog(_data: {
+  async createAuditLog(data: {
     projectId: string
     userId?: string
     event: string
@@ -523,19 +568,175 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
     userAgent?: string
     metadata?: Record<string, unknown>
   }): Promise<void> {
-    throw new Error('Not implemented')
+    await this.db.insert(auditLogs).values({
+      projectId: data.projectId,
+      userId: data.userId,
+      event: data.event,
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
+      metadata: data.metadata ?? {},
+    })
   }
 
   async getAuditLogs(
-    _projectId: string,
-    _options: {
+    projectId: string,
+    options: {
       userId?: string
       limit: number
       offset: number
       event?: string
     },
   ): Promise<{ logs: AuditLog[]; total: number }> {
-    throw new Error('Not implemented')
+    let filter = eq(auditLogs.projectId, projectId)
+
+    if (options.userId) {
+      filter = and(filter, eq(auditLogs.userId, options.userId))
+    }
+
+    if (options.event) {
+      filter = and(filter, eq(auditLogs.event, options.event))
+    }
+
+    const rows = await this.db
+      .select()
+      .from(auditLogs)
+      .where(filter)
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(options.limit)
+      .offset(options.offset)
+
+    const [totalRow] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(auditLogs)
+      .where(filter)
+
+    return {
+      logs: rows.map(mapAuditLog),
+      total: Number(totalRow?.count ?? 0),
+    }
+  }
+
+  async createWebhookEndpoint(data: {
+    projectId: string
+    url: string
+    secret: string
+    events: string[]
+    enabled?: boolean
+  }): Promise<WebhookEndpoint> {
+    const [row] = await this.db
+      .insert(webhookEndpoints)
+      .values({
+        projectId: data.projectId,
+        url: data.url,
+        secret: data.secret,
+        events: data.events,
+        enabled: data.enabled ?? true,
+      })
+      .returning()
+
+    return mapWebhookEndpoint(row)
+  }
+
+  async listWebhookEndpoints(projectId: string): Promise<WebhookEndpoint[]> {
+    const rows = await this.db
+      .select()
+      .from(webhookEndpoints)
+      .where(eq(webhookEndpoints.projectId, projectId))
+      .orderBy(desc(webhookEndpoints.createdAt))
+
+    return rows.map(mapWebhookEndpoint)
+  }
+
+  async updateWebhookEndpoint(
+    projectId: string,
+    id: string,
+    data: Partial<{
+      url: string
+      secret: string
+      events: string[]
+      enabled: boolean
+    }>,
+  ): Promise<WebhookEndpoint> {
+    const [row] = await this.db
+      .update(webhookEndpoints)
+      .set({
+        url: data.url,
+        secret: data.secret,
+        events: data.events,
+        enabled: data.enabled,
+      })
+      .where(and(eq(webhookEndpoints.projectId, projectId), eq(webhookEndpoints.id, id)))
+      .returning()
+
+    return mapWebhookEndpoint(row)
+  }
+
+  async deleteWebhookEndpoint(projectId: string, id: string): Promise<void> {
+    await this.db
+      .delete(webhookEndpoints)
+      .where(and(eq(webhookEndpoints.projectId, projectId), eq(webhookEndpoints.id, id)))
+  }
+
+  async createWebhookDelivery(data: {
+    endpointId: string
+    event: string
+    payload: Record<string, unknown>
+    attempt?: number
+  }): Promise<WebhookDelivery> {
+    const [row] = await this.db
+      .insert(webhookDeliveries)
+      .values({
+        endpointId: data.endpointId,
+        event: data.event,
+        payload: data.payload,
+        attempt: data.attempt ?? 1,
+      })
+      .returning()
+
+    return mapWebhookDelivery(row)
+  }
+
+  async markWebhookDeliveryResult(data: {
+    id: string
+    responseStatus: number
+    responseBody?: string
+    delivered: boolean
+  }): Promise<void> {
+    await this.db
+      .update(webhookDeliveries)
+      .set({
+        responseStatus: data.responseStatus,
+        responseBody: data.responseBody,
+        deliveredAt: data.delivered ? new Date() : null,
+        failedAt: data.delivered ? null : new Date(),
+      })
+      .where(eq(webhookDeliveries.id, data.id))
+  }
+
+  async getWebhookDeliveries(
+    endpointId: string,
+    options: {
+      limit: number
+      offset: number
+    },
+  ): Promise<{ deliveries: WebhookDelivery[]; total: number }> {
+    const rows = await this.db
+      .select()
+      .from(webhookDeliveries)
+      .where(eq(webhookDeliveries.endpointId, endpointId))
+      .orderBy(desc(webhookDeliveries.createdAt))
+      .limit(options.limit)
+      .offset(options.offset)
+
+    const [totalRow] = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(webhookDeliveries)
+      .where(eq(webhookDeliveries.endpointId, endpointId))
+
+    return {
+      deliveries: rows.map(mapWebhookDelivery),
+      total: Number(totalRow?.count ?? 0),
+    }
   }
 }
 

@@ -12,5 +12,7 @@ describe('createDrizzleDatabaseAdapter', () => {
     const typed: DatabaseAdapter = adapter
     expect(typeof typed.createUser).toBe('function')
     expect(typeof typed.createSession).toBe('function')
+    expect(typeof typed.createAuditLog).toBe('function')
+    expect(typeof typed.createWebhookEndpoint).toBe('function')
   })
 })

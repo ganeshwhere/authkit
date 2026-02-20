@@ -59,6 +59,29 @@ export interface AuditLog {
   createdAt: Date
 }
 
+export interface WebhookEndpoint {
+  id: string
+  projectId: string
+  url: string
+  secret: string
+  events: string[]
+  enabled: boolean
+  createdAt: Date
+}
+
+export interface WebhookDelivery {
+  id: string
+  endpointId: string
+  event: string
+  payload: Record<string, unknown>
+  responseStatus: number | null
+  responseBody: string | null
+  attempt: number
+  deliveredAt: Date | null
+  failedAt: Date | null
+  createdAt: Date
+}
+
 export interface DatabaseAdapter {
   createUser(
     projectId: string,
@@ -199,4 +222,49 @@ export interface DatabaseAdapter {
       event?: string
     },
   ): Promise<{ logs: AuditLog[]; total: number }>
+
+  createWebhookEndpoint(data: {
+    projectId: string
+    url: string
+    secret: string
+    events: string[]
+    enabled?: boolean
+  }): Promise<WebhookEndpoint>
+
+  listWebhookEndpoints(projectId: string): Promise<WebhookEndpoint[]>
+
+  updateWebhookEndpoint(
+    projectId: string,
+    id: string,
+    data: Partial<{
+      url: string
+      secret: string
+      events: string[]
+      enabled: boolean
+    }>,
+  ): Promise<WebhookEndpoint>
+
+  deleteWebhookEndpoint(projectId: string, id: string): Promise<void>
+
+  createWebhookDelivery(data: {
+    endpointId: string
+    event: string
+    payload: Record<string, unknown>
+    attempt?: number
+  }): Promise<WebhookDelivery>
+
+  markWebhookDeliveryResult(data: {
+    id: string
+    responseStatus: number
+    responseBody?: string
+    delivered: boolean
+  }): Promise<void>
+
+  getWebhookDeliveries(
+    endpointId: string,
+    options: {
+      limit: number
+      offset: number
+    },
+  ): Promise<{ deliveries: WebhookDelivery[]; total: number }>
 }
