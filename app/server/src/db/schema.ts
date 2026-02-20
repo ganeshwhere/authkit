@@ -4,6 +4,7 @@ import {
   boolean,
   index,
   inet,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -179,3 +180,50 @@ export const passkeys = pgTable(
     ),
   }),
 )
+
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    event: text('event').notNull(),
+    ipAddress: inet('ip_address'),
+    userAgent: text('user_agent'),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    auditProjectIndex: index('idx_audit_logs_project_id').on(table.projectId, table.createdAt),
+    auditUserIndex: index('idx_audit_logs_user_id').on(table.userId, table.createdAt),
+  }),
+)
+
+export const webhookEndpoints = pgTable('webhook_endpoints', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  projectId: uuid('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  secret: text('secret').notNull(),
+  events: text('events').array().notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const webhookDeliveries = pgTable('webhook_deliveries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  endpointId: uuid('endpoint_id')
+    .notNull()
+    .references(() => webhookEndpoints.id, { onDelete: 'cascade' }),
+  event: text('event').notNull(),
+  payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+  responseStatus: integer('response_status'),
+  responseBody: text('response_body'),
+  attempt: integer('attempt').notNull().default(1),
+  deliveredAt: timestamp('delivered_at', { withTimezone: true }),
+  failedAt: timestamp('failed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})

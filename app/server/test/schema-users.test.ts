@@ -2,6 +2,7 @@ import { getTableColumns } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import {
+  auditLogs,
   oauthAccounts,
   passkeys,
   projects,
@@ -10,6 +11,8 @@ import {
   userPasswords,
   users,
   verificationTokens,
+  webhookDeliveries,
+  webhookEndpoints,
 } from '../src/db/schema'
 
 describe('schema - foundational tables', () => {
@@ -43,5 +46,15 @@ describe('schema - foundational tables', () => {
     expect(mfaColumns.backupCodes).toBeDefined()
     expect(passkeyColumns.credentialId).toBeDefined()
     expect(passkeyColumns.counter).toBeDefined()
+  })
+
+  it('includes audit and webhook tables', () => {
+    const auditColumns = getTableColumns(auditLogs)
+    const endpointColumns = getTableColumns(webhookEndpoints)
+    const deliveryColumns = getTableColumns(webhookDeliveries)
+
+    expect(auditColumns.event).toBeDefined()
+    expect(endpointColumns.events).toBeDefined()
+    expect(deliveryColumns.attempt).toBeDefined()
   })
 })
