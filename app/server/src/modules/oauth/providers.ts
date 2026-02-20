@@ -50,12 +50,17 @@ function isSupportedProvider(provider: string): provider is OAuthProviderId {
   return (oauthProviderIds as readonly string[]).includes(provider)
 }
 
-export function getOAuthProviderConfig(providerInput: string): OAuthProviderRuntimeConfig {
+export function parseOAuthProvider(providerInput: string): OAuthProviderId {
   if (!isSupportedProvider(providerInput)) {
     throw Errors.OAUTH_PROVIDER_NOT_CONFIGURED(providerInput)
   }
 
-  const credentials = config.oauthProviders[providerInput]
+  return providerInput
+}
+
+export function getOAuthProviderConfig(providerInput: string): OAuthProviderRuntimeConfig {
+  const providerId = parseOAuthProvider(providerInput)
+  const credentials = config.oauthProviders[providerId]
 
   if (!credentials) {
     throw Errors.OAUTH_PROVIDER_NOT_CONFIGURED(providerInput)
@@ -64,8 +69,8 @@ export function getOAuthProviderConfig(providerInput: string): OAuthProviderRunt
   const callbackUrl = new URL(`/v1/auth/oauth/${providerInput}/callback`, config.baseUrl).toString()
 
   return {
-    id: providerInput,
-    ...providerDefinitions[providerInput],
+    id: providerId,
+    ...providerDefinitions[providerId],
     clientId: credentials.clientId,
     clientSecret: credentials.clientSecret,
     callbackUrl,

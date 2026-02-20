@@ -10,6 +10,7 @@ import {
   oauthBeginHandler,
   oauthCallbackHandler,
 } from '../modules/oauth/handlers'
+import { oauthDisconnectHandler } from '../modules/oauth/disconnect'
 import { refreshHandler } from '../modules/auth/refresh'
 import { resetPasswordHandler } from '../modules/auth/reset-password'
 import { signinHandler } from '../modules/auth/signin'
@@ -30,6 +31,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
   server.post('/mfa/verify', mfaVerifyHandler)
   server.get('/oauth/:provider', oauthBeginHandler)
   server.get('/oauth/:provider/callback', oauthCallbackHandler)
+  server.delete('/oauth/:provider', oauthDisconnectHandler)
   server.get('/_status', async () => ({ data: { ok: true }, error: null }))
 }
 

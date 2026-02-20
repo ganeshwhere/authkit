@@ -73,6 +73,12 @@ export const Errors = {
     new AuthKitError('INVALID_OAUTH_STATE', 'Invalid or expired OAuth state', 400),
   OAUTH_AUTHORIZATION_FAILED: (): AuthKitError =>
     new AuthKitError('OAUTH_AUTHORIZATION_FAILED', 'OAuth authorization failed', 400),
+  CANNOT_REMOVE_LAST_AUTH_METHOD: (): AuthKitError =>
+    new AuthKitError(
+      'CANNOT_REMOVE_LAST_AUTH_METHOD',
+      'Cannot remove the last available authentication method',
+      400,
+    ),
   INTERNAL_ERROR: (): AuthKitError =>
     new AuthKitError('INTERNAL_ERROR', 'An unexpected error occurred', 500),
 } as const
