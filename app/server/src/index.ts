@@ -2,16 +2,11 @@ import Fastify, { type FastifyInstance } from 'fastify'
 
 import { config } from './config'
 import { globalErrorHandler } from './utils/error-handler'
+import { buildLoggerOptions } from './utils/logging'
 
 export async function buildServer(): Promise<FastifyInstance> {
   const server = Fastify({
-    logger: {
-      level: config.logLevel,
-      serializers: {
-        req: (req) => ({ method: req.method, url: req.url, ip: req.ip }),
-        res: (res) => ({ statusCode: res.statusCode }),
-      },
-    },
+    logger: buildLoggerOptions(config.logLevel),
     trustProxy: config.trustProxy,
     ajv: {
       customOptions: {
