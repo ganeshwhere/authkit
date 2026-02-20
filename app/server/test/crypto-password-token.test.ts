@@ -4,6 +4,8 @@ import {
   generateSecureToken,
   generateTokenHash,
   hashPassword,
+  signHMAC,
+  verifyHMAC,
   verifyPassword,
 } from '../src/utils/crypto'
 
@@ -32,5 +34,16 @@ describe('crypto password + token utilities', () => {
 
     expect(first).toBe(second)
     expect(first).toMatch(/^[a-f0-9]{64}$/)
+  })
+
+  it('signs and verifies hmac signatures', () => {
+    const payload = 'timestamp.payload'
+    const secret = 'super-secret-hmac-key-1234567890'
+
+    const signature = signHMAC(payload, secret)
+
+    expect(verifyHMAC(payload, signature, secret)).toBe(true)
+    expect(verifyHMAC(`${payload}.tampered`, signature, secret)).toBe(false)
+    expect(verifyHMAC(payload, `${signature}0`, secret)).toBe(false)
   })
 })
