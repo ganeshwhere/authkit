@@ -43,6 +43,8 @@ export const Errors = {
     new AuthKitError('TOKEN_ALREADY_USED', 'This token has already been used', 400),
   INVALID_REFRESH_TOKEN: (): AuthKitError =>
     new AuthKitError('INVALID_REFRESH_TOKEN', 'Invalid refresh token', 401),
+  SESSION_EXPIRED: (): AuthKitError =>
+    new AuthKitError('SESSION_EXPIRED', 'Session has expired', 401),
   TOKEN_REUSE_DETECTED: (): AuthKitError =>
     new AuthKitError('TOKEN_REUSE_DETECTED', 'Session security violation detected', 401),
   INVALID_CSRF_TOKEN: (): AuthKitError =>
