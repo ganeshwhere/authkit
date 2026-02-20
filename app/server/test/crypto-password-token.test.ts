@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  decrypt,
+  encrypt,
   generateSecureToken,
   generateTokenHash,
   hashPassword,
@@ -45,5 +47,22 @@ describe('crypto password + token utilities', () => {
     expect(verifyHMAC(payload, signature, secret)).toBe(true)
     expect(verifyHMAC(`${payload}.tampered`, signature, secret)).toBe(false)
     expect(verifyHMAC(payload, `${signature}0`, secret)).toBe(false)
+  })
+
+  it('encrypts and decrypts using aes-256-gcm', () => {
+    const key = Buffer.from('a'.repeat(64), 'hex')
+
+    const ciphertext = encrypt('sensitive-value', key)
+    const plaintext = decrypt(ciphertext, key)
+
+    expect(plaintext).toBe('sensitive-value')
+  })
+
+  it('rejects tampered ciphertext', () => {
+    const key = Buffer.from('a'.repeat(64), 'hex')
+    const ciphertext = encrypt('secret', key)
+    const [iv, payload, tag] = ciphertext.split('.')
+
+    expect(() => decrypt(`${iv}.${payload}x.${tag}`, key)).toThrowError()
   })
 })

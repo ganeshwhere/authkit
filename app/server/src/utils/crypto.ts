@@ -1,4 +1,11 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from 'node:crypto'
 
 import argon2 from 'argon2'
 
@@ -45,4 +52,40 @@ export function verifyHMAC(data: string, signature: string, secret: string): boo
   }
 
   return timingSafeEqual(expectedBuffer, providedBuffer)
+}
+
+export function encrypt(plaintext: string, key: Buffer): string {
+  if (key.length !== 32) {
+    throw new Error('Encryption key must be 32 bytes')
+  }
+
+  const iv = randomBytes(12)
+  const cipher = createCipheriv('aes-256-gcm', key, iv)
+
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
+  const authTag = cipher.getAuthTag()
+
+  return `${iv.toString('base64url')}.${encrypted.toString('base64url')}.${authTag.toString('base64url')}`
+}
+
+export function decrypt(ciphertext: string, key: Buffer): string {
+  if (key.length !== 32) {
+    throw new Error('Encryption key must be 32 bytes')
+  }
+
+  const [ivBase64, payloadBase64, tagBase64] = ciphertext.split('.')
+
+  if (!ivBase64 || !payloadBase64 || !tagBase64) {
+    throw new Error('Invalid ciphertext format')
+  }
+
+  const iv = Buffer.from(ivBase64, 'base64url')
+  const payload = Buffer.from(payloadBase64, 'base64url')
+  const tag = Buffer.from(tagBase64, 'base64url')
+
+  const decipher = createDecipheriv('aes-256-gcm', key, iv)
+  decipher.setAuthTag(tag)
+
+  const decrypted = Buffer.concat([decipher.update(payload), decipher.final()])
+  return decrypted.toString('utf8')
 }
