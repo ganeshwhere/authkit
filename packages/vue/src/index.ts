@@ -1,1 +1,3 @@
-export const packageName = '@authkit/vue'
+export * from './provider'
+export * from './hooks'
+export * from './headless'
