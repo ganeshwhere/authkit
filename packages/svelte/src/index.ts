@@ -1,1 +1,2 @@
-export const packageName = '@authkit/svelte'
+export * from './store'
+export * from './headless'
