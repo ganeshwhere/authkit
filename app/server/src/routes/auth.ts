@@ -7,6 +7,13 @@ import {
 } from '../modules/auth/magic-link'
 import { mfaVerifyHandler } from '../modules/auth/mfa-verify'
 import {
+  mfaBackupCodesHandler,
+  mfaBackupCodesRegenerateHandler,
+  mfaTotpDisableHandler,
+  mfaTotpEnableHandler,
+  mfaTotpSetupHandler,
+} from '../modules/mfa/handlers'
+import {
   oauthBeginHandler,
   oauthCallbackHandler,
 } from '../modules/oauth/handlers'
@@ -29,6 +36,11 @@ const authRoutes: FastifyPluginAsync = async (server) => {
   server.post('/reset-password', resetPasswordHandler)
   server.post('/verify-email', verifyEmailHandler)
   server.post('/mfa/verify', mfaVerifyHandler)
+  server.post('/mfa/totp/setup', mfaTotpSetupHandler)
+  server.post('/mfa/totp/enable', mfaTotpEnableHandler)
+  server.post('/mfa/totp/disable', mfaTotpDisableHandler)
+  server.get('/mfa/backup-codes', mfaBackupCodesHandler)
+  server.post('/mfa/backup-codes/regenerate', mfaBackupCodesRegenerateHandler)
   server.get('/oauth/:provider', oauthBeginHandler)
   server.get('/oauth/:provider/callback', oauthCallbackHandler)
   server.delete('/oauth/:provider', oauthDisconnectHandler)

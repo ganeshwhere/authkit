@@ -61,6 +61,8 @@ export const Errors = {
     new AuthKitError('INVALID_MFA_TOKEN', 'Invalid or expired MFA challenge token', 400),
   MFA_NOT_ENABLED: (): AuthKitError =>
     new AuthKitError('MFA_NOT_ENABLED', 'MFA is not enabled for this account', 400),
+  MFA_ALREADY_ENABLED: (): AuthKitError =>
+    new AuthKitError('MFA_ALREADY_ENABLED', 'MFA is already enabled for this account', 400),
   OAUTH_PROVIDER_NOT_CONFIGURED: (provider: string): AuthKitError =>
     new AuthKitError(
       'OAUTH_PROVIDER_NOT_CONFIGURED',

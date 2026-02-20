@@ -11,6 +11,11 @@ import {
   issueRefreshToken,
   setRefreshTokenCookie,
 } from '../../utils/tokens'
+import {
+  decryptTotpSecret,
+  verifyAndConsumeBackupCode,
+  verifyTotpCode,
+} from '../mfa/totp'
 
 const mfaVerifyBodySchema = z.object({
   mfaToken: z.string().min(1),
@@ -20,6 +25,14 @@ const mfaVerifyBodySchema = z.object({
 type PendingMfaPayload = {
   userId: string
   projectId: string
+}
+
+function pendingKey(mfaToken: string): string {
+  return `mfa:pending:${mfaToken}`
+}
+
+function attemptsKey(mfaToken: string): string {
+  return `mfa:attempts:${mfaToken}`
 }
 
 function parsePendingMfaPayload(value: string | null): PendingMfaPayload | null {
@@ -40,18 +53,13 @@ function parsePendingMfaPayload(value: string | null): PendingMfaPayload | null 
   }
 }
 
-function verifyMfaCode(code: string): boolean {
-  // Full TOTP verification is implemented in the dedicated MFA phase.
-  return code === '000000'
-}
-
 export async function mfaVerifyHandler(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
   const parsed = mfaVerifyBodySchema.parse(request.body)
 
-  const pendingRaw = await request.server.cache.get(`mfa:pending:${parsed.mfaToken}`)
+  const pendingRaw = await request.server.cache.get(pendingKey(parsed.mfaToken))
   const pending = parsePendingMfaPayload(pendingRaw)
 
   if (!pending) {
@@ -70,11 +78,31 @@ export async function mfaVerifyHandler(
     throw Errors.INVALID_MFA_TOKEN()
   }
 
-  if (!verifyMfaCode(parsed.code)) {
-    throw Errors.INVALID_MFA_CODE()
+  const decryptedSecret = decryptTotpSecret(mfa.encryptedSecret)
+  const totpValid = verifyTotpCode(decryptedSecret, parsed.code)
+
+  if (!totpValid) {
+    const backup = verifyAndConsumeBackupCode(parsed.code, mfa.hashedBackupCodes)
+
+    if (backup.matched) {
+      await request.server.dbAdapter.updateBackupCodes(user.id, backup.remaining)
+    } else {
+      const key = attemptsKey(parsed.mfaToken)
+      const attempts = await request.server.cache.increment(key)
+      await request.server.cache.expire(key, 600)
+
+      if (attempts >= 10) {
+        await request.server.cache.delete(pendingKey(parsed.mfaToken))
+        await request.server.cache.delete(key)
+        throw Errors.INVALID_MFA_TOKEN()
+      }
+
+      throw Errors.INVALID_MFA_CODE()
+    }
   }
 
-  await request.server.cache.delete(`mfa:pending:${parsed.mfaToken}`)
+  await request.server.cache.delete(pendingKey(parsed.mfaToken))
+  await request.server.cache.delete(attemptsKey(parsed.mfaToken))
 
   const refresh = issueRefreshToken(32)
   const tokenFamily = createTokenFamilyId()
