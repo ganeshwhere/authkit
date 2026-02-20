@@ -3,7 +3,8 @@ import type Redis from 'ioredis'
 
 import type { DatabaseAdapter } from './adapters'
 import type { AuthKitDatabase } from '../db'
-import type { CacheAdapter } from './adapters'
+import type { CacheAdapter, EmailAdapter } from './adapters'
+import type { EmailService } from '../modules/email/service'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -12,5 +13,7 @@ declare module 'fastify' {
     dbAdapter: DatabaseAdapter
     redis: Redis
     cache: CacheAdapter
+    emailAdapter: EmailAdapter
+    emailService: EmailService
   }
 }
