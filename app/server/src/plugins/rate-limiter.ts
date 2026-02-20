@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
 
 const rateLimiterPlugin: FastifyPluginAsync = async () => {
-  // Implemented in subsequent commits.
+  // Endpoint-specific policy registration is added in a subsequent commit.
 }
 
 export default fp(rateLimiterPlugin, { name: 'rate-limiter' })
