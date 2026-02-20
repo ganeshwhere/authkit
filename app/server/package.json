@@ -11,7 +11,10 @@
     "test": "vitest run",
     "clean": "rm -rf dist"
   },
-  "dependencies": {},
+  "dependencies": {
+    "fastify": "^5.2.1",
+    "fastify-plugin": "^5.0.1"
+  },
   "devDependencies": {
     "tsup": "^8.3.5",
     "tsx": "^4.19.2"
