@@ -24,6 +24,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   await server.register(import('./plugins/database'))
   await server.register(import('./plugins/cache'))
   await server.register(import('./plugins/email'))
+  await server.register(import('./plugins/email-queue'))
   await server.register(import('./plugins/auth'))
 
   await server.register(import('./routes/auth'), { prefix: '/v1/auth' })

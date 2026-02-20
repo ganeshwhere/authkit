@@ -1,3 +1,4 @@
+import type { Queue } from 'bullmq'
 import type { Pool } from 'pg'
 import type Redis from 'ioredis'
 
@@ -5,6 +6,7 @@ import type { DatabaseAdapter } from './adapters'
 import type { AuthKitDatabase } from '../db'
 import type { CacheAdapter, EmailAdapter } from './adapters'
 import type { EmailService } from '../modules/email/service'
+import type { EmailQueueJobPayload } from '../modules/email/queue'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -15,5 +17,7 @@ declare module 'fastify' {
     cache: CacheAdapter
     emailAdapter: EmailAdapter
     emailService: EmailService
+    emailQueue: Queue<EmailQueueJobPayload>
+    enqueueEmail: (payload: EmailQueueJobPayload) => Promise<void>
   }
 }
