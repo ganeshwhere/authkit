@@ -9,6 +9,22 @@ dependencies = [
   "PyJWT>=2.9.0"
 ]
 
+[project.optional-dependencies]
+fastapi = [
+  "fastapi>=0.110.0"
+]
+flask = [
+  "flask>=3.0.0"
+]
+django = [
+  "django>=4.2"
+]
+frameworks = [
+  "fastapi>=0.110.0",
+  "flask>=3.0.0",
+  "django>=4.2"
+]
+
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"

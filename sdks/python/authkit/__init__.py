@@ -8,11 +8,13 @@ from .errors import (
     JWKSFetchError,
     TokenExpiredError,
 )
+from .framework import extract_bearer_token
 
 __all__ = [
     "AuthKit",
     "AuthKitError",
     "ConfigurationError",
+    "extract_bearer_token",
     "InvalidTokenError",
     "JWKSFetchError",
     "TokenExpiredError",
