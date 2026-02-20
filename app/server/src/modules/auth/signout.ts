@@ -68,6 +68,28 @@ export async function signoutHandler(
         request.log.warn({ error }, 'Failed to enqueue signout webhook events')
       }
     }
+
+    if (typeof request.server.emitAuditEvent === 'function') {
+      await request.server.emitAuditEvent({
+        projectId: payload.pid,
+        userId: payload.sub,
+        event: 'user.signed_out',
+        request,
+        metadata: {
+          sessionId: session.id,
+        },
+      })
+
+      await request.server.emitAuditEvent({
+        projectId: payload.pid,
+        userId: payload.sub,
+        event: 'session.revoked',
+        request,
+        metadata: {
+          sessionId: session.id,
+        },
+      })
+    }
   }
 
   clearRefreshTokenCookie(reply, config.nodeEnv === 'production')

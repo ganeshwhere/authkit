@@ -304,6 +304,40 @@ export async function oauthCallbackHandler(
     }
   }
 
+  if (typeof request.server.emitAuditEvent === 'function') {
+    if (oauthResult.linkedAccountCreated) {
+      await request.server.emitAuditEvent({
+        projectId: state.projectId,
+        userId: user.id,
+        event: 'oauth.connected',
+        request,
+        metadata: {
+          provider: providerConfig.id,
+        },
+      })
+    }
+
+    await request.server.emitAuditEvent({
+      projectId: state.projectId,
+      userId: user.id,
+      event: 'user.signed_in',
+      request,
+      metadata: {
+        method: `oauth:${providerConfig.id}`,
+      },
+    })
+
+    await request.server.emitAuditEvent({
+      projectId: state.projectId,
+      userId: user.id,
+      event: 'session.created',
+      request,
+      metadata: {
+        sessionId: session.id,
+      },
+    })
+  }
+
   const location = appendHash(
     appendQuery(state.redirectUrl, {
       provider: providerConfig.id,

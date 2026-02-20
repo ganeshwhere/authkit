@@ -23,6 +23,7 @@ export async function buildServer(): Promise<FastifyInstance> {
   await server.register(import('./plugins/rate-limiter'))
   await server.register(import('./plugins/database'))
   await server.register(import('./plugins/cache'))
+  await server.register(import('./plugins/audit'))
   await server.register(import('./plugins/email'))
   await server.register(import('./plugins/email-queue'))
   await server.register(import('./plugins/webhook-queue'))

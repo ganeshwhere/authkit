@@ -78,16 +78,17 @@ async function handleReuseDetection(
 ): Promise<never> {
   await request.server.dbAdapter.revokeSessionFamily(marker.tokenFamily)
 
-  await request.server.dbAdapter.createAuditLog({
-    projectId: marker.projectId,
-    userId: marker.userId,
-    event: 'session.compromised',
-    ipAddress: request.ip,
-    userAgent: request.headers['user-agent'] as string | undefined,
-    metadata: {
-      reason: 'refresh_token_reuse_detected',
-    },
-  })
+  if (typeof request.server.emitAuditEvent === 'function') {
+    await request.server.emitAuditEvent({
+      projectId: marker.projectId,
+      userId: marker.userId,
+      event: 'session.compromised',
+      request,
+      metadata: {
+        reason: 'refresh_token_reuse_detected',
+      },
+    })
+  }
 
   if (typeof request.server.emitWebhookEvent === 'function') {
     try {

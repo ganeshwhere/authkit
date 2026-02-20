@@ -123,6 +123,28 @@ export async function signupHandler(
     }
   }
 
+  if (typeof request.server.emitAuditEvent === 'function') {
+    await request.server.emitAuditEvent({
+      projectId,
+      userId: user.id,
+      event: 'user.created',
+      request,
+      metadata: {
+        method: 'password',
+      },
+    })
+
+    await request.server.emitAuditEvent({
+      projectId,
+      userId: user.id,
+      event: 'session.created',
+      request,
+      metadata: {
+        sessionId: session.id,
+      },
+    })
+  }
+
   reply.code(201).send({
     data: {
       user,

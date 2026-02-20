@@ -149,6 +149,28 @@ export async function signinHandler(
     }
   }
 
+  if (typeof request.server.emitAuditEvent === 'function') {
+    await request.server.emitAuditEvent({
+      projectId,
+      userId: user.id,
+      event: 'user.signed_in',
+      request,
+      metadata: {
+        method: 'password',
+      },
+    })
+
+    await request.server.emitAuditEvent({
+      projectId,
+      userId: user.id,
+      event: 'session.created',
+      request,
+      metadata: {
+        sessionId: session.id,
+      },
+    })
+  }
+
   reply.send({
     data: {
       user,

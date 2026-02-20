@@ -62,16 +62,17 @@ export async function oauthDisconnectHandler(
     }
   }
 
-  await request.server.dbAdapter.createAuditLog({
-    projectId: auth.pid,
-    userId: auth.sub,
-    event: 'oauth.disconnected',
-    ipAddress: request.ip,
-    userAgent: request.headers['user-agent'] as string | undefined,
-    metadata: {
-      provider: providerId,
-    },
-  })
+  if (typeof request.server.emitAuditEvent === 'function') {
+    await request.server.emitAuditEvent({
+      projectId: auth.pid,
+      userId: auth.sub,
+      event: 'oauth.disconnected',
+      request,
+      metadata: {
+        provider: providerId,
+      },
+    })
+  }
 
   reply.send({
     data: {

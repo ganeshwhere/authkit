@@ -9,6 +9,7 @@ import type { EmailService } from '../modules/email/service'
 import type { EmailQueueJobPayload } from '../modules/email/queue'
 import type { WebhookDeliveryJobPayload } from '../modules/webhooks/queue'
 import type { WebhookEventInput } from '../modules/webhooks/events'
+import type { AuditEventInput } from '../modules/audit/emitter'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -21,6 +22,7 @@ declare module 'fastify' {
     emailService: EmailService
     emailQueue: Queue<EmailQueueJobPayload>
     enqueueEmail: (payload: EmailQueueJobPayload) => Promise<void>
+    emitAuditEvent: (event: AuditEventInput) => Promise<void>
     webhookQueue: Queue<WebhookDeliveryJobPayload>
     emitWebhookEvent: (event: WebhookEventInput) => Promise<void>
   }

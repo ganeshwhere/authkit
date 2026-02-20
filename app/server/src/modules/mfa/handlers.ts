@@ -139,7 +139,7 @@ export async function mfaTotpEnableHandler(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
-  const { userId } = await getCurrentUser(request)
+  const { userId, projectId } = await getCurrentUser(request)
   const parsed = mfaCodeBodySchema.parse(request.body)
 
   const pendingRaw = await request.server.cache.get(setupCacheKey(userId))
@@ -177,6 +177,18 @@ export async function mfaTotpEnableHandler(
     300,
   )
 
+  if (typeof request.server.emitAuditEvent === 'function') {
+    await request.server.emitAuditEvent({
+      projectId,
+      userId,
+      event: 'mfa.enabled',
+      request,
+      metadata: {
+        method: 'totp',
+      },
+    })
+  }
+
   reply.send({
     data: {
       success: true,
@@ -189,7 +201,7 @@ export async function mfaTotpDisableHandler(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
-  const { userId } = await getCurrentUser(request)
+  const { userId, projectId } = await getCurrentUser(request)
   const parsed = mfaCodeBodySchema.parse(request.body)
 
   const valid = await verifyActiveMfaCode(request, userId, parsed.code)
@@ -201,6 +213,18 @@ export async function mfaTotpDisableHandler(
   await request.server.dbAdapter.deleteMFA(userId)
   await request.server.cache.delete(setupCacheKey(userId))
   await request.server.cache.delete(backupViewCacheKey(userId))
+
+  if (typeof request.server.emitAuditEvent === 'function') {
+    await request.server.emitAuditEvent({
+      projectId,
+      userId,
+      event: 'mfa.disabled',
+      request,
+      metadata: {
+        method: 'totp',
+      },
+    })
+  }
 
   reply.send({
     data: {

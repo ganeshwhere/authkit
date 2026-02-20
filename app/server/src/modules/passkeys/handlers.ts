@@ -298,6 +298,39 @@ export async function passkeyRegisterCompleteHandler(
     throw Errors.PASSKEY_ALREADY_EXISTS()
   }
 
+  if (typeof request.server.emitWebhookEvent === 'function') {
+    try {
+      await request.server.emitWebhookEvent({
+        type: 'passkey.registered',
+        projectId: auth.pid,
+        data: {
+          user: {
+            id: auth.sub,
+          },
+          passkey: {
+            credentialId,
+            displayName: parsed.displayName ?? null,
+          },
+        },
+      })
+    } catch (error) {
+      request.log.warn({ error }, 'Failed to enqueue passkey registered webhook event')
+    }
+  }
+
+  if (typeof request.server.emitAuditEvent === 'function') {
+    await request.server.emitAuditEvent({
+      projectId: auth.pid,
+      userId: auth.sub,
+      event: 'passkey.registered',
+      request,
+      metadata: {
+        credentialId,
+        displayName: parsed.displayName ?? null,
+      },
+    })
+  }
+
   reply.send({
     data: {
       passkey: {
@@ -445,6 +478,68 @@ export async function passkeyAuthenticateCompleteHandler(
   })
 
   setRefreshTokenCookie(reply, refresh.token, config.nodeEnv === 'production')
+
+  if (typeof request.server.emitWebhookEvent === 'function') {
+    try {
+      await request.server.emitWebhookEvent({
+        type: 'user.signed_in',
+        projectId: challengeState.projectId,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+          },
+          session: {
+            id: session.id,
+            ipAddress: session.ipAddress,
+            userAgent: session.userAgent,
+          },
+        },
+      })
+
+      await request.server.emitWebhookEvent({
+        type: 'session.created',
+        projectId: challengeState.projectId,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+          },
+          session: {
+            id: session.id,
+            ipAddress: session.ipAddress,
+            userAgent: session.userAgent,
+          },
+        },
+      })
+    } catch (error) {
+      request.log.warn({ error }, 'Failed to enqueue passkey authentication webhook events')
+    }
+  }
+
+  if (typeof request.server.emitAuditEvent === 'function') {
+    await request.server.emitAuditEvent({
+      projectId: challengeState.projectId,
+      userId: user.id,
+      event: 'user.signed_in',
+      request,
+      metadata: {
+        method: 'passkey',
+      },
+    })
+
+    await request.server.emitAuditEvent({
+      projectId: challengeState.projectId,
+      userId: user.id,
+      event: 'session.created',
+      request,
+      metadata: {
+        sessionId: session.id,
+      },
+    })
+  }
 
   reply.send({
     data: {
