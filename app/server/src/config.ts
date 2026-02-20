@@ -1,5 +1,14 @@
 import { z } from 'zod'
 
+export type OAuthProvider = 'google' | 'github' | 'discord'
+
+type OAuthProviderCredentials = {
+  clientId: string
+  clientSecret: string
+}
+
+type OAuthProvidersConfig = Partial<Record<OAuthProvider, OAuthProviderCredentials>>
+
 const configSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3001),
   HOST: z.string().default('0.0.0.0'),
@@ -34,6 +43,14 @@ const configSchema = z.object({
 
   PWNED_PASSWORDS_CHECK: z.coerce.boolean().default(false),
   REQUIRE_EMAIL_VERIFICATION: z.coerce.boolean().default(false),
+
+  OAUTH_REDIRECT_ALLOWLIST: z.string().default(''),
+  OAUTH_GOOGLE_CLIENT_ID: z.string().optional(),
+  OAUTH_GOOGLE_CLIENT_SECRET: z.string().optional(),
+  OAUTH_GITHUB_CLIENT_ID: z.string().optional(),
+  OAUTH_GITHUB_CLIENT_SECRET: z.string().optional(),
+  OAUTH_DISCORD_CLIENT_ID: z.string().optional(),
+  OAUTH_DISCORD_CLIENT_SECRET: z.string().optional(),
 })
 
 export type AppConfig = {
@@ -62,6 +79,53 @@ export type AppConfig = {
   smtpUrl?: string
   pwnedPasswordsCheck: boolean
   requireEmailVerification: boolean
+  oauthRedirectAllowlist: string[]
+  oauthProviders: OAuthProvidersConfig
+}
+
+function parseUrlList(value: string): string[] {
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
+    .map((entry) => {
+      const parsed = z.string().url().safeParse(entry)
+
+      if (!parsed.success) {
+        throw new Error(`Invalid URL in list: ${entry}`)
+      }
+
+      return parsed.data
+    })
+}
+
+function parseOAuthProviders(
+  parsed: z.infer<typeof configSchema>,
+): OAuthProvidersConfig {
+  const providers: OAuthProvidersConfig = {}
+
+  if (parsed.OAUTH_GOOGLE_CLIENT_ID && parsed.OAUTH_GOOGLE_CLIENT_SECRET) {
+    providers.google = {
+      clientId: parsed.OAUTH_GOOGLE_CLIENT_ID,
+      clientSecret: parsed.OAUTH_GOOGLE_CLIENT_SECRET,
+    }
+  }
+
+  if (parsed.OAUTH_GITHUB_CLIENT_ID && parsed.OAUTH_GITHUB_CLIENT_SECRET) {
+    providers.github = {
+      clientId: parsed.OAUTH_GITHUB_CLIENT_ID,
+      clientSecret: parsed.OAUTH_GITHUB_CLIENT_SECRET,
+    }
+  }
+
+  if (parsed.OAUTH_DISCORD_CLIENT_ID && parsed.OAUTH_DISCORD_CLIENT_SECRET) {
+    providers.discord = {
+      clientId: parsed.OAUTH_DISCORD_CLIENT_ID,
+      clientSecret: parsed.OAUTH_DISCORD_CLIENT_SECRET,
+    }
+  }
+
+  return providers
 }
 
 export function loadConfig(env: Record<string, string | undefined>): AppConfig {
@@ -95,6 +159,8 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     smtpUrl: parsed.SMTP_URL,
     pwnedPasswordsCheck: parsed.PWNED_PASSWORDS_CHECK,
     requireEmailVerification: parsed.REQUIRE_EMAIL_VERIFICATION,
+    oauthRedirectAllowlist: parseUrlList(parsed.OAUTH_REDIRECT_ALLOWLIST),
+    oauthProviders: parseOAuthProviders(parsed),
   }
 }
 

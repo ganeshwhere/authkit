@@ -67,6 +67,12 @@ export const Errors = {
       `OAuth provider "${provider}" is not configured`,
       400,
     ),
+  INVALID_REDIRECT_URI: (): AuthKitError =>
+    new AuthKitError('INVALID_REDIRECT_URI', 'Invalid OAuth redirect URI', 400),
+  INVALID_OAUTH_STATE: (): AuthKitError =>
+    new AuthKitError('INVALID_OAUTH_STATE', 'Invalid or expired OAuth state', 400),
+  OAUTH_AUTHORIZATION_FAILED: (): AuthKitError =>
+    new AuthKitError('OAUTH_AUTHORIZATION_FAILED', 'OAuth authorization failed', 400),
   INTERNAL_ERROR: (): AuthKitError =>
     new AuthKitError('INTERNAL_ERROR', 'An unexpected error occurred', 500),
 } as const

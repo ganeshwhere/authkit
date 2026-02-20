@@ -34,6 +34,34 @@ describe('loadConfig', () => {
     expect(result.corsOrigins).toEqual(['https://a.example.com', 'https://b.example.com'])
   })
 
+  it('parses OAuth redirect allowlist', () => {
+    const result = loadConfig(
+      baseEnv({
+        OAUTH_REDIRECT_ALLOWLIST: 'https://app.example.com/callback, https://app.example.com/auth',
+      }),
+    )
+
+    expect(result.oauthRedirectAllowlist).toEqual([
+      'https://app.example.com/callback',
+      'https://app.example.com/auth',
+    ])
+  })
+
+  it('builds configured OAuth providers map', () => {
+    const result = loadConfig(
+      baseEnv({
+        OAUTH_GOOGLE_CLIENT_ID: 'google-client',
+        OAUTH_GOOGLE_CLIENT_SECRET: 'google-secret',
+      }),
+    )
+
+    expect(result.oauthProviders.google).toEqual({
+      clientId: 'google-client',
+      clientSecret: 'google-secret',
+    })
+    expect(result.oauthProviders.github).toBeUndefined()
+  })
+
   it('supports optional previous jwt public key', () => {
     const result = loadConfig(baseEnv({ JWT_PUBLIC_KEY_PREVIOUS: 'old-public-key' }))
 
@@ -42,6 +70,12 @@ describe('loadConfig', () => {
 
   it('throws for invalid BASE_URL', () => {
     expect(() => loadConfig(baseEnv({ BASE_URL: 'bad-url' }))).toThrowError(ZodError)
+  })
+
+  it('throws for invalid OAuth redirect URL entries', () => {
+    expect(() =>
+      loadConfig(baseEnv({ OAUTH_REDIRECT_ALLOWLIST: 'https://ok.example.com,not-a-url' })),
+    ).toThrowError('Invalid URL in list')
   })
 
   it('throws for invalid encryption key length', () => {
