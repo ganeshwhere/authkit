@@ -81,6 +81,12 @@ export const Errors = {
       'Cannot remove the last available authentication method',
       400,
     ),
+  PASSKEY_CHALLENGE_INVALID: (): AuthKitError =>
+    new AuthKitError('PASSKEY_CHALLENGE_INVALID', 'Invalid or expired passkey challenge', 400),
+  PASSKEY_VERIFICATION_FAILED: (): AuthKitError =>
+    new AuthKitError('PASSKEY_VERIFICATION_FAILED', 'Passkey verification failed', 400),
+  PASSKEY_ALREADY_EXISTS: (): AuthKitError =>
+    new AuthKitError('PASSKEY_ALREADY_EXISTS', 'Passkey already registered', 409),
   INTERNAL_ERROR: (): AuthKitError =>
     new AuthKitError('INTERNAL_ERROR', 'An unexpected error occurred', 500),
 } as const

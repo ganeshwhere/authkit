@@ -18,6 +18,12 @@ import {
   oauthCallbackHandler,
 } from '../modules/oauth/handlers'
 import { oauthDisconnectHandler } from '../modules/oauth/disconnect'
+import {
+  passkeyAuthenticateBeginHandler,
+  passkeyAuthenticateCompleteHandler,
+  passkeyRegisterBeginHandler,
+  passkeyRegisterCompleteHandler,
+} from '../modules/passkeys/handlers'
 import { refreshHandler } from '../modules/auth/refresh'
 import { resetPasswordHandler } from '../modules/auth/reset-password'
 import { signinHandler } from '../modules/auth/signin'
@@ -41,6 +47,10 @@ const authRoutes: FastifyPluginAsync = async (server) => {
   server.post('/mfa/totp/disable', mfaTotpDisableHandler)
   server.get('/mfa/backup-codes', mfaBackupCodesHandler)
   server.post('/mfa/backup-codes/regenerate', mfaBackupCodesRegenerateHandler)
+  server.post('/passkey/register/begin', passkeyRegisterBeginHandler)
+  server.post('/passkey/register/complete', passkeyRegisterCompleteHandler)
+  server.post('/passkey/authenticate/begin', passkeyAuthenticateBeginHandler)
+  server.post('/passkey/authenticate/complete', passkeyAuthenticateCompleteHandler)
   server.get('/oauth/:provider', oauthBeginHandler)
   server.get('/oauth/:provider/callback', oauthCallbackHandler)
   server.delete('/oauth/:provider', oauthDisconnectHandler)
