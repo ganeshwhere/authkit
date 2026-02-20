@@ -5,6 +5,7 @@ import {
   magicLinkSendHandler,
   magicLinkVerifyHandler,
 } from '../modules/auth/magic-link'
+import { mfaVerifyHandler } from '../modules/auth/mfa-verify'
 import { refreshHandler } from '../modules/auth/refresh'
 import { resetPasswordHandler } from '../modules/auth/reset-password'
 import { signinHandler } from '../modules/auth/signin'
@@ -22,6 +23,7 @@ const authRoutes: FastifyPluginAsync = async (server) => {
   server.post('/forgot-password', forgotPasswordHandler)
   server.post('/reset-password', resetPasswordHandler)
   server.post('/verify-email', verifyEmailHandler)
+  server.post('/mfa/verify', mfaVerifyHandler)
   server.get('/_status', async () => ({ data: { ok: true }, error: null }))
 }
 

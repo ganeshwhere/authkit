@@ -57,6 +57,8 @@ export const Errors = {
     new AuthKitError('MFA_REQUIRED', 'Multi-factor authentication required', 403),
   INVALID_MFA_CODE: (): AuthKitError =>
     new AuthKitError('INVALID_MFA_CODE', 'Invalid authentication code', 400),
+  INVALID_MFA_TOKEN: (): AuthKitError =>
+    new AuthKitError('INVALID_MFA_TOKEN', 'Invalid or expired MFA challenge token', 400),
   MFA_NOT_ENABLED: (): AuthKitError =>
     new AuthKitError('MFA_NOT_ENABLED', 'MFA is not enabled for this account', 400),
   OAUTH_PROVIDER_NOT_CONFIGURED: (provider: string): AuthKitError =>
