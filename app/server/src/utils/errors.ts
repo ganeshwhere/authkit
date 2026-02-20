@@ -28,6 +28,10 @@ export const Errors = {
     new AuthKitError('ACCOUNT_NOT_FOUND', 'No account found with this email', 404),
   ACCOUNT_LOCKED: (): AuthKitError =>
     new AuthKitError('ACCOUNT_LOCKED', 'Too many failed attempts. Try again later.', 429),
+  PROJECT_ID_REQUIRED: (): AuthKitError =>
+    new AuthKitError('PROJECT_ID_REQUIRED', 'Project id header is required', 400),
+  VALIDATION_ERROR: (details?: Record<string, unknown>): AuthKitError =>
+    new AuthKitError('VALIDATION_ERROR', 'Request validation failed', 400, details),
   SIGNUPS_DISABLED: (): AuthKitError =>
     new AuthKitError('SIGNUPS_DISABLED', 'New account registration is currently disabled', 403),
   WEAK_PASSWORD: (score: number): AuthKitError =>
