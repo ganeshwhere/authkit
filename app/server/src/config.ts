@@ -19,6 +19,7 @@ const configSchema = z.object({
 
   JWT_PRIVATE_KEY: z.string().min(1),
   JWT_PUBLIC_KEY: z.string().min(1),
+  JWT_PUBLIC_KEY_PREVIOUS: z.string().optional(),
   ENCRYPTION_KEY: z.string().length(64),
   HMAC_SECRET: z.string().min(32),
 
@@ -49,6 +50,7 @@ export type AppConfig = {
   redisUrl: string
   jwtPrivateKey: string
   jwtPublicKey: string
+  jwtPublicKeyPrevious?: string
   encryptionKey: string
   hmacSecret: string
   sessionDurationSeconds: number
@@ -81,6 +83,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     redisUrl: parsed.REDIS_URL,
     jwtPrivateKey: parsed.JWT_PRIVATE_KEY,
     jwtPublicKey: parsed.JWT_PUBLIC_KEY,
+    jwtPublicKeyPrevious: parsed.JWT_PUBLIC_KEY_PREVIOUS,
     encryptionKey: parsed.ENCRYPTION_KEY,
     hmacSecret: parsed.HMAC_SECRET,
     sessionDurationSeconds: parsed.SESSION_DURATION_SECONDS,

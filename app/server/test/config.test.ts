@@ -34,6 +34,12 @@ describe('loadConfig', () => {
     expect(result.corsOrigins).toEqual(['https://a.example.com', 'https://b.example.com'])
   })
 
+  it('supports optional previous jwt public key', () => {
+    const result = loadConfig(baseEnv({ JWT_PUBLIC_KEY_PREVIOUS: 'old-public-key' }))
+
+    expect(result.jwtPublicKeyPrevious).toBe('old-public-key')
+  })
+
   it('throws for invalid BASE_URL', () => {
     expect(() => loadConfig(baseEnv({ BASE_URL: 'bad-url' }))).toThrowError(ZodError)
   })
