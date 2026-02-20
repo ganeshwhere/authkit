@@ -23,6 +23,15 @@ describe('loadConfig', () => {
     expect(result.host).toBe('0.0.0.0')
     expect(result.logLevel).toBe('info')
     expect(result.accessTokenTtlSeconds).toBe(900)
+    expect(result.corsOrigins).toEqual([])
+  })
+
+  it('parses CORS origins list', () => {
+    const result = loadConfig(
+      baseEnv({ CORS_ORIGINS: 'https://a.example.com, https://b.example.com ' }),
+    )
+
+    expect(result.corsOrigins).toEqual(['https://a.example.com', 'https://b.example.com'])
   })
 
   it('throws for invalid BASE_URL', () => {

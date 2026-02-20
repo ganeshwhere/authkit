@@ -9,6 +9,7 @@ const configSchema = z.object({
     .default('info'),
   TRUST_PROXY: z.coerce.boolean().default(false),
   BASE_URL: z.string().url(),
+  CORS_ORIGINS: z.string().default(''),
 
   DATABASE_URL: z.string().min(1),
   DATABASE_POOL_MIN: z.coerce.number().int().min(0).default(2),
@@ -41,6 +42,7 @@ export type AppConfig = {
   logLevel: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'
   trustProxy: boolean
   baseUrl: string
+  corsOrigins: string[]
   databaseUrl: string
   databasePoolMin: number
   databasePoolMax: number
@@ -70,6 +72,9 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     logLevel: parsed.LOG_LEVEL,
     trustProxy: parsed.TRUST_PROXY,
     baseUrl: parsed.BASE_URL,
+    corsOrigins: parsed.CORS_ORIGINS.split(',')
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0),
     databaseUrl: parsed.DATABASE_URL,
     databasePoolMin: parsed.DATABASE_POOL_MIN,
     databasePoolMax: parsed.DATABASE_POOL_MAX,
