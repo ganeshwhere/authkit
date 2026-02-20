@@ -1,7 +1,7 @@
 import { generateKeyPairSync } from 'node:crypto'
 
 import Fastify from 'fastify'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { globalErrorHandler } from '../src/utils/error-handler'
 
@@ -27,6 +27,11 @@ beforeAll(async () => {
   delete process.env.OAUTH_GITHUB_CLIENT_SECRET
 
   authRoutes = (await import('../src/routes/auth')).default
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 function createCache() {
@@ -59,12 +64,69 @@ function createCache() {
   }
 }
 
+function buildUser() {
+  return {
+    id: 'user_1',
+    projectId: 'project_1',
+    email: 'oauth@example.com',
+    emailVerified: true,
+    displayName: 'OAuth User',
+    avatarUrl: null,
+    metadata: {},
+    bannedAt: null,
+    deletedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+}
+
+function createAdapter(overrides: Record<string, unknown> = {}) {
+  return {
+    getOAuthAccount: vi.fn(async () => null),
+    getUserById: vi.fn(async () => buildUser()),
+    getUserByEmail: vi.fn(async () => null),
+    createUser: vi.fn(async () => buildUser()),
+    createOAuthAccount: vi.fn(async () => undefined),
+    createSession: vi.fn(async () => ({
+      id: 'session_1',
+      userId: 'user_1',
+      projectId: 'project_1',
+      tokenHash: 'hash',
+      tokenFamily: 'family',
+      ipAddress: null,
+      userAgent: null,
+      lastActiveAt: new Date(),
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      createdAt: new Date(),
+    })),
+    ...overrides,
+  }
+}
+
+function mockFetchSequence(responses: Array<{ status: number; body: unknown; contentType?: string }>): void {
+  const fetchMock = vi.fn()
+
+  for (const response of responses) {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(response.body), {
+        status: response.status,
+        headers: {
+          'content-type': response.contentType ?? 'application/json',
+        },
+      }),
+    )
+  }
+
+  vi.stubGlobal('fetch', fetchMock)
+}
+
 describe('OAuth route framework', () => {
   it('rejects redirect URLs outside allowlist', async () => {
     const { cache } = createCache()
     const server = Fastify()
 
-    server.decorate('dbAdapter', {} as never)
+    server.decorate('dbAdapter', createAdapter() as never)
     server.decorate('cache', cache)
     server.setErrorHandler(globalErrorHandler)
 
@@ -88,7 +150,7 @@ describe('OAuth route framework', () => {
     const { cache, store } = createCache()
     const server = Fastify()
 
-    server.decorate('dbAdapter', {} as never)
+    server.decorate('dbAdapter', createAdapter() as never)
     server.decorate('cache', cache)
     server.setErrorHandler(globalErrorHandler)
 
@@ -120,11 +182,32 @@ describe('OAuth route framework', () => {
     await server.close()
   })
 
-  it('consumes OAuth state in callback and prevents replay', async () => {
+  it('completes callback flow and redirects with access token hash', async () => {
+    mockFetchSequence([
+      {
+        status: 200,
+        body: {
+          access_token: 'google-access-token',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        },
+      },
+      {
+        status: 200,
+        body: {
+          sub: 'google-user-id',
+          email: 'oauth@example.com',
+          email_verified: true,
+          name: 'OAuth User',
+          picture: 'https://cdn.example.com/avatar.png',
+        },
+      },
+    ])
+
     const { cache } = createCache()
     const server = Fastify()
 
-    server.decorate('dbAdapter', {} as never)
+    server.decorate('dbAdapter', createAdapter() as never)
     server.decorate('cache', cache)
     server.setErrorHandler(globalErrorHandler)
 
@@ -138,8 +221,8 @@ describe('OAuth route framework', () => {
       },
     })
 
-    const authorizeUrl = new URL(begin.headers.location as string)
-    const state = authorizeUrl.searchParams.get('state')
+    const beginUrl = new URL(begin.headers.location as string)
+    const state = beginUrl.searchParams.get('state')
 
     expect(state).toBeTruthy()
 
@@ -152,8 +235,64 @@ describe('OAuth route framework', () => {
 
     const callbackTarget = new URL(callback.headers.location as string)
     expect(callbackTarget.origin).toBe('https://app.example.com')
-    expect(callbackTarget.searchParams.get('oauth_code')).toBe('oauth-code')
     expect(callbackTarget.searchParams.get('state')).toBe('client-state')
+
+    const fragment = new URLSearchParams(callbackTarget.hash.slice(1))
+    expect(fragment.get('accessToken')).toBeTruthy()
+
+    const setCookie = callback.headers['set-cookie']
+    expect(setCookie).toBeTruthy()
+
+    await server.close()
+  })
+
+  it('consumes OAuth state once and blocks replay', async () => {
+    mockFetchSequence([
+      {
+        status: 200,
+        body: {
+          access_token: 'google-access-token',
+        },
+      },
+      {
+        status: 200,
+        body: {
+          sub: 'google-user-id',
+          email: 'oauth@example.com',
+          email_verified: true,
+          name: 'OAuth User',
+        },
+      },
+    ])
+
+    const { cache } = createCache()
+    const server = Fastify()
+
+    server.decorate('dbAdapter', createAdapter() as never)
+    server.decorate('cache', cache)
+    server.setErrorHandler(globalErrorHandler)
+
+    await server.register(authRoutes, { prefix: '/v1/auth' })
+
+    const begin = await server.inject({
+      method: 'GET',
+      url: '/v1/auth/oauth/google?redirectUrl=https://app.example.com/callback',
+      headers: {
+        'x-authkit-project-id': 'project_1',
+      },
+    })
+
+    const beginUrl = new URL(begin.headers.location as string)
+    const state = beginUrl.searchParams.get('state')
+
+    expect(state).toBeTruthy()
+
+    const firstCallback = await server.inject({
+      method: 'GET',
+      url: `/v1/auth/oauth/google/callback?code=oauth-code&state=${state}`,
+    })
+
+    expect(firstCallback.statusCode).toBe(302)
 
     const replay = await server.inject({
       method: 'GET',
@@ -170,7 +309,7 @@ describe('OAuth route framework', () => {
     const { cache } = createCache()
     const server = Fastify()
 
-    server.decorate('dbAdapter', {} as never)
+    server.decorate('dbAdapter', createAdapter() as never)
     server.decorate('cache', cache)
     server.setErrorHandler(globalErrorHandler)
 
