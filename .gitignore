@@ -1,0 +1,39 @@
+# Node
+node_modules/
+.pnpm-store/
+
+# Build artifacts
+dist/
+build/
+coverage/
+.turbo/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Go
+bin/
+
+# Docker volumes/tmp
+*.pid
+*.seed
+
+# Misc
+.tmp/
+tmp/
