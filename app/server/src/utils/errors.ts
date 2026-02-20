@@ -26,6 +26,8 @@ export const Errors = {
     new AuthKitError('ACCOUNT_BANNED', 'This account has been banned', 403),
   ACCOUNT_NOT_FOUND: (): AuthKitError =>
     new AuthKitError('ACCOUNT_NOT_FOUND', 'No account found with this email', 404),
+  ACCOUNT_LOCKED: (): AuthKitError =>
+    new AuthKitError('ACCOUNT_LOCKED', 'Too many failed attempts. Try again later.', 429),
   SIGNUPS_DISABLED: (): AuthKitError =>
     new AuthKitError('SIGNUPS_DISABLED', 'New account registration is currently disabled', 403),
   WEAK_PASSWORD: (score: number): AuthKitError =>
