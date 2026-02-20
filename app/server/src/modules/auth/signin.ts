@@ -109,6 +109,46 @@ export async function signinHandler(
 
   setRefreshTokenCookie(reply, refresh.token, config.nodeEnv === 'production')
 
+  if (typeof request.server.emitWebhookEvent === 'function') {
+    try {
+      await request.server.emitWebhookEvent({
+        type: 'user.signed_in',
+        projectId,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+          },
+          session: {
+            id: session.id,
+            ipAddress: session.ipAddress,
+            userAgent: session.userAgent,
+          },
+        },
+      })
+
+      await request.server.emitWebhookEvent({
+        type: 'session.created',
+        projectId,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+          },
+          session: {
+            id: session.id,
+            ipAddress: session.ipAddress,
+            userAgent: session.userAgent,
+          },
+        },
+      })
+    } catch (error) {
+      request.log.warn({ error }, 'Failed to enqueue signin webhook events')
+    }
+  }
+
   reply.send({
     data: {
       user,

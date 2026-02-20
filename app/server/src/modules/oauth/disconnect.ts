@@ -45,6 +45,23 @@ export async function oauthDisconnectHandler(
 
   await request.server.dbAdapter.deleteOAuthAccount(auth.sub, providerId)
 
+  if (typeof request.server.emitWebhookEvent === 'function') {
+    try {
+      await request.server.emitWebhookEvent({
+        type: 'oauth.disconnected',
+        projectId: auth.pid,
+        data: {
+          user: {
+            id: auth.sub,
+          },
+          provider: providerId,
+        },
+      })
+    } catch (error) {
+      request.log.warn({ error }, 'Failed to enqueue oauth disconnected webhook event')
+    }
+  }
+
   await request.server.dbAdapter.createAuditLog({
     projectId: auth.pid,
     userId: auth.sub,

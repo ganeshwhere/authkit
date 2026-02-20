@@ -30,6 +30,44 @@ export async function signoutHandler(
 
   if (session) {
     await request.server.dbAdapter.revokeSession(session.tokenHash)
+
+    if (typeof request.server.emitWebhookEvent === 'function') {
+      try {
+        await request.server.emitWebhookEvent({
+          type: 'user.signed_out',
+          projectId: payload.pid,
+          data: {
+            user: {
+              id: payload.sub,
+              email: payload.email,
+            },
+            session: {
+              id: session.id,
+              ipAddress: session.ipAddress,
+              userAgent: session.userAgent,
+            },
+          },
+        })
+
+        await request.server.emitWebhookEvent({
+          type: 'session.revoked',
+          projectId: payload.pid,
+          data: {
+            user: {
+              id: payload.sub,
+              email: payload.email,
+            },
+            session: {
+              id: session.id,
+              ipAddress: session.ipAddress,
+              userAgent: session.userAgent,
+            },
+          },
+        })
+      } catch (error) {
+        request.log.warn({ error }, 'Failed to enqueue signout webhook events')
+      }
+    }
   }
 
   clearRefreshTokenCookie(reply, config.nodeEnv === 'production')

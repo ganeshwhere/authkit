@@ -75,7 +75,16 @@ async function resolveOAuthUser(
     avatarUrl: string | null
     rawProfile: Record<string, unknown>
   },
-) {
+): Promise<{
+  user: {
+    id: string
+    email: string
+    emailVerified: boolean
+    displayName: string | null
+    bannedAt: Date | null
+  }
+  linkedAccountCreated: boolean
+}> {
   const existingAccount = await request.server.dbAdapter.getOAuthAccount(
     data.projectId,
     data.provider,
@@ -89,7 +98,10 @@ async function resolveOAuthUser(
       throw Errors.UNAUTHORIZED()
     }
 
-    return existingUser
+    return {
+      user: existingUser,
+      linkedAccountCreated: false,
+    }
   }
 
   if (!data.email) {
@@ -109,6 +121,8 @@ async function resolveOAuthUser(
     })
   }
 
+  let linkedAccountCreated = false
+
   try {
     await request.server.dbAdapter.createOAuthAccount({
       userId: user.id,
@@ -117,6 +131,7 @@ async function resolveOAuthUser(
       providerUserId: data.providerUserId,
       rawProfile: data.rawProfile,
     })
+    linkedAccountCreated = true
   } catch {
     const account = await request.server.dbAdapter.getOAuthAccount(
       data.projectId,
@@ -129,7 +144,10 @@ async function resolveOAuthUser(
     }
   }
 
-  return user
+  return {
+    user,
+    linkedAccountCreated,
+  }
 }
 
 export async function oauthBeginHandler(
@@ -187,7 +205,7 @@ export async function oauthCallbackHandler(
   const tokenSet = await exchangeOAuthCode(providerConfig, query.code)
   const profile = await fetchOAuthProfile(providerConfig.id, providerConfig.userInfoUrl, tokenSet.accessToken)
 
-  const user = await resolveOAuthUser(request, {
+  const oauthResult = await resolveOAuthUser(request, {
     projectId: state.projectId,
     provider: providerConfig.id,
     providerUserId: profile.providerUserId,
@@ -197,6 +215,7 @@ export async function oauthCallbackHandler(
     avatarUrl: profile.avatarUrl,
     rawProfile: profile.rawProfile,
   })
+  const user = oauthResult.user
 
   if (user.bannedAt) {
     throw Errors.ACCOUNT_BANNED()
@@ -230,6 +249,60 @@ export async function oauthCallbackHandler(
   })
 
   setRefreshTokenCookie(reply, refresh.token, config.nodeEnv === 'production')
+
+  if (typeof request.server.emitWebhookEvent === 'function') {
+    try {
+      if (oauthResult.linkedAccountCreated) {
+        await request.server.emitWebhookEvent({
+          type: 'oauth.connected',
+          projectId: state.projectId,
+          data: {
+            user: {
+              id: user.id,
+              email: user.email,
+            },
+            provider: providerConfig.id,
+          },
+        })
+      }
+
+      await request.server.emitWebhookEvent({
+        type: 'user.signed_in',
+        projectId: state.projectId,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+          },
+          session: {
+            id: session.id,
+            ipAddress: session.ipAddress,
+            userAgent: session.userAgent,
+          },
+        },
+      })
+
+      await request.server.emitWebhookEvent({
+        type: 'session.created',
+        projectId: state.projectId,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+          },
+          session: {
+            id: session.id,
+            ipAddress: session.ipAddress,
+            userAgent: session.userAgent,
+          },
+        },
+      })
+    } catch (error) {
+      request.log.warn({ error }, 'Failed to enqueue OAuth webhook events')
+    }
+  }
 
   const location = appendHash(
     appendQuery(state.redirectUrl, {

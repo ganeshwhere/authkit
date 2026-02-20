@@ -89,6 +89,23 @@ async function handleReuseDetection(
     },
   })
 
+  if (typeof request.server.emitWebhookEvent === 'function') {
+    try {
+      await request.server.emitWebhookEvent({
+        type: 'session.compromised',
+        projectId: marker.projectId,
+        data: {
+          user: {
+            id: marker.userId,
+          },
+          reason: 'refresh_token_reuse_detected',
+        },
+      })
+    } catch (error) {
+      request.log.warn({ error }, 'Failed to enqueue compromised session webhook event')
+    }
+  }
+
   throw Errors.TOKEN_REUSE_DETECTED()
 }
 

@@ -88,6 +88,41 @@ export async function signupHandler(
 
   setRefreshTokenCookie(reply, refresh.token, config.nodeEnv === 'production')
 
+  if (typeof request.server.emitWebhookEvent === 'function') {
+    try {
+      await request.server.emitWebhookEvent({
+        type: 'user.created',
+        projectId,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+          },
+        },
+      })
+
+      await request.server.emitWebhookEvent({
+        type: 'session.created',
+        projectId,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            displayName: user.displayName,
+          },
+          session: {
+            id: session.id,
+            ipAddress: session.ipAddress,
+            userAgent: session.userAgent,
+          },
+        },
+      })
+    } catch (error) {
+      request.log.warn({ error }, 'Failed to enqueue signup webhook events')
+    }
+  }
+
   reply.code(201).send({
     data: {
       user,
