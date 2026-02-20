@@ -9,10 +9,24 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import type { DatabaseAdapter, OAuthAccount, VerificationToken } from '../../types/adapters'
+import type { DatabaseAdapter } from '../../types/adapters'
 import type { AuthKitDatabase } from '../../db'
-import { sessions, userPasswords, users } from '../../db/schema'
-import type { AuditLog, Session, User } from '../../../../packages/core/src/adapters/db'
+import {
+  oauthAccounts,
+  passkeys,
+  sessions,
+  userMfa,
+  userPasswords,
+  users,
+  verificationTokens,
+} from '../../db/schema'
+import type {
+  AuditLog,
+  OAuthAccount,
+  Session,
+  User,
+  VerificationToken,
+} from '../../../../packages/core/src/adapters/db'
 
 function mapUser(row: typeof users.$inferSelect): User {
   return {
@@ -42,6 +56,34 @@ function mapSession(row: typeof sessions.$inferSelect): Session {
     lastActiveAt: row.lastActiveAt,
     expiresAt: row.expiresAt,
     revokedAt: row.revokedAt,
+    createdAt: row.createdAt,
+  }
+}
+
+function mapVerificationToken(row: typeof verificationTokens.$inferSelect): VerificationToken {
+  const type = row.type as VerificationToken['type']
+
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    userId: row.userId,
+    email: row.email,
+    tokenHash: row.tokenHash,
+    type,
+    usedAt: row.usedAt,
+    expiresAt: row.expiresAt,
+    createdAt: row.createdAt,
+  }
+}
+
+function mapOAuthAccount(row: typeof oauthAccounts.$inferSelect): OAuthAccount {
+  return {
+    id: row.id,
+    userId: row.userId,
+    projectId: row.projectId,
+    provider: row.provider,
+    providerUserId: row.providerUserId,
+    rawProfile: row.rawProfile,
     createdAt: row.createdAt,
   }
 }
@@ -261,7 +303,7 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
     await this.db.delete(sessions).where(lt(sessions.expiresAt, new Date()))
   }
 
-  async createVerificationToken(_data: {
+  async createVerificationToken(data: {
     projectId: string
     userId?: string
     email: string
@@ -269,73 +311,143 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
     type: VerificationToken['type']
     expiresAt: Date
   }): Promise<VerificationToken> {
-    throw new Error('Not implemented')
+    const [row] = await this.db
+      .insert(verificationTokens)
+      .values({
+        projectId: data.projectId,
+        userId: data.userId,
+        email: data.email,
+        tokenHash: data.tokenHash,
+        type: data.type,
+        expiresAt: data.expiresAt,
+      })
+      .returning()
+
+    return mapVerificationToken(row)
   }
 
   async getVerificationToken(
-    _tokenHash: string,
-    _type: VerificationToken['type'],
+    tokenHash: string,
+    type: VerificationToken['type'],
   ): Promise<VerificationToken | null> {
-    throw new Error('Not implemented')
+    const [row] = await this.db
+      .select()
+      .from(verificationTokens)
+      .where(and(eq(verificationTokens.tokenHash, tokenHash), eq(verificationTokens.type, type)))
+      .limit(1)
+
+    return row ? mapVerificationToken(row) : null
   }
 
-  async markTokenUsed(_tokenHash: string): Promise<void> {
-    throw new Error('Not implemented')
+  async markTokenUsed(tokenHash: string): Promise<void> {
+    await this.db
+      .update(verificationTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(verificationTokens.tokenHash, tokenHash))
   }
 
   async deleteExpiredTokens(): Promise<void> {
-    throw new Error('Not implemented')
+    await this.db.delete(verificationTokens).where(lt(verificationTokens.expiresAt, new Date()))
   }
 
-  async createOAuthAccount(_data: {
+  async createOAuthAccount(data: {
     userId: string
     projectId: string
     provider: string
     providerUserId: string
     rawProfile: Record<string, unknown>
   }): Promise<OAuthAccount> {
-    throw new Error('Not implemented')
+    const [row] = await this.db
+      .insert(oauthAccounts)
+      .values({
+        userId: data.userId,
+        projectId: data.projectId,
+        provider: data.provider,
+        providerUserId: data.providerUserId,
+        rawProfile: data.rawProfile,
+      })
+      .returning()
+
+    return mapOAuthAccount(row)
   }
 
   async getOAuthAccount(
-    _projectId: string,
-    _provider: string,
-    _providerUserId: string,
+    projectId: string,
+    provider: string,
+    providerUserId: string,
   ): Promise<OAuthAccount | null> {
-    throw new Error('Not implemented')
+    const [row] = await this.db
+      .select()
+      .from(oauthAccounts)
+      .where(
+        and(
+          eq(oauthAccounts.projectId, projectId),
+          eq(oauthAccounts.provider, provider),
+          eq(oauthAccounts.providerUserId, providerUserId),
+        ),
+      )
+      .limit(1)
+
+    return row ? mapOAuthAccount(row) : null
   }
 
-  async getOAuthAccountsByUserId(_userId: string): Promise<OAuthAccount[]> {
-    throw new Error('Not implemented')
+  async getOAuthAccountsByUserId(userId: string): Promise<OAuthAccount[]> {
+    const rows = await this.db
+      .select()
+      .from(oauthAccounts)
+      .where(eq(oauthAccounts.userId, userId))
+      .orderBy(desc(oauthAccounts.createdAt))
+
+    return rows.map(mapOAuthAccount)
   }
 
-  async deleteOAuthAccount(_userId: string, _provider: string): Promise<void> {
-    throw new Error('Not implemented')
+  async deleteOAuthAccount(userId: string, provider: string): Promise<void> {
+    await this.db
+      .delete(oauthAccounts)
+      .where(and(eq(oauthAccounts.userId, userId), eq(oauthAccounts.provider, provider)))
   }
 
   async createMFASecret(
-    _userId: string,
-    _encryptedSecret: string,
-    _hashedBackupCodes: string[],
+    userId: string,
+    encryptedSecret: string,
+    hashedBackupCodes: string[],
   ): Promise<void> {
-    throw new Error('Not implemented')
+    await this.db.insert(userMfa).values({
+      userId,
+      secret: encryptedSecret,
+      backupCodes: hashedBackupCodes,
+    })
   }
 
   async getMFA(
-    _userId: string,
+    userId: string,
   ): Promise<{ encryptedSecret: string; hashedBackupCodes: string[] } | null> {
-    throw new Error('Not implemented')
+    const [row] = await this.db
+      .select({ encryptedSecret: userMfa.secret, hashedBackupCodes: userMfa.backupCodes })
+      .from(userMfa)
+      .where(eq(userMfa.userId, userId))
+      .limit(1)
+
+    return row
+      ? {
+          encryptedSecret: row.encryptedSecret,
+          hashedBackupCodes: row.hashedBackupCodes,
+        }
+      : null
   }
 
-  async updateBackupCodes(_userId: string, _hashedBackupCodes: string[]): Promise<void> {
-    throw new Error('Not implemented')
+  async updateBackupCodes(userId: string, hashedBackupCodes: string[]): Promise<void> {
+    await this.db
+      .update(userMfa)
+      .set({ backupCodes: hashedBackupCodes })
+      .where(eq(userMfa.userId, userId))
   }
 
-  async deleteMFA(_userId: string): Promise<void> {
-    throw new Error('Not implemented')
+  async deleteMFA(userId: string): Promise<void> {
+    await this.db.delete(userMfa).where(eq(userMfa.userId, userId))
   }
 
-  async createPasskey(_data: {
+  async createPasskey(data: {
     userId: string
     projectId: string
     credentialId: string
@@ -346,10 +458,20 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
     backedUp?: boolean
     displayName?: string
   }): Promise<void> {
-    throw new Error('Not implemented')
+    await this.db.insert(passkeys).values({
+      userId: data.userId,
+      projectId: data.projectId,
+      credentialId: data.credentialId,
+      publicKey: data.publicKey,
+      counter: data.counter,
+      deviceType: data.deviceType,
+      transports: data.transports,
+      backedUp: data.backedUp,
+      displayName: data.displayName,
+    })
   }
 
-  async getPasskeysByUserId(_userId: string): Promise<
+  async getPasskeysByUserId(userId: string): Promise<
     Array<{
       id: string
       credentialId: string
@@ -359,15 +481,38 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       displayName: string | null
     }>
   > {
-    throw new Error('Not implemented')
+    const rows = await this.db
+      .select({
+        id: passkeys.id,
+        credentialId: passkeys.credentialId,
+        publicKey: passkeys.publicKey,
+        counter: passkeys.counter,
+        transports: passkeys.transports,
+        displayName: passkeys.displayName,
+      })
+      .from(passkeys)
+      .where(eq(passkeys.userId, userId))
+      .orderBy(desc(passkeys.createdAt))
+
+    return rows.map((row) => ({
+      id: row.id,
+      credentialId: row.credentialId,
+      publicKey: row.publicKey,
+      counter: row.counter,
+      transports: row.transports ?? [],
+      displayName: row.displayName,
+    }))
   }
 
-  async updatePasskeyCounter(_credentialId: string, _counter: number): Promise<void> {
-    throw new Error('Not implemented')
+  async updatePasskeyCounter(credentialId: string, counter: number): Promise<void> {
+    await this.db
+      .update(passkeys)
+      .set({ counter, lastUsedAt: new Date() })
+      .where(eq(passkeys.credentialId, credentialId))
   }
 
-  async deletePasskey(_id: string, _userId: string): Promise<void> {
-    throw new Error('Not implemented')
+  async deletePasskey(id: string, userId: string): Promise<void> {
+    await this.db.delete(passkeys).where(and(eq(passkeys.id, id), eq(passkeys.userId, userId)))
   }
 
   async createAuditLog(_data: {
