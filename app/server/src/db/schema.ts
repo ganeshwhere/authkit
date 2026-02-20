@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
+  bigint,
   boolean,
   index,
   inet,
@@ -63,6 +64,35 @@ export const userPasswords = pgTable('user_passwords', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
+export const oauthAccounts = pgTable(
+  'oauth_accounts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    provider: text('provider').notNull(),
+    providerUserId: text('provider_user_id').notNull(),
+    accessToken: text('access_token'),
+    refreshToken: text('refresh_token'),
+    tokenExpiresAt: timestamp('token_expires_at', { withTimezone: true }),
+    rawProfile: jsonb('raw_profile').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    providerIdentityUnique: uniqueIndex('oauth_accounts_provider_identity_unique').on(
+      table.projectId,
+      table.provider,
+      table.providerUserId,
+    ),
+    oauthUserIndex: index('idx_oauth_accounts_user').on(table.userId),
+  }),
+)
+
 export const sessions = pgTable(
   'sessions',
   {
@@ -108,5 +138,44 @@ export const verificationTokens = pgTable(
   (table) => ({
     tokenHashUnique: uniqueIndex('verification_tokens_token_hash_unique').on(table.tokenHash),
     tokenHashIndex: index('idx_verification_tokens_hash').on(table.tokenHash),
+  }),
+)
+
+export const userMfa = pgTable('user_mfa', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' })
+    .unique(),
+  secret: text('secret').notNull(),
+  backupCodes: text('backup_codes').array().notNull(),
+  enabledAt: timestamp('enabled_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const passkeys = pgTable(
+  'passkeys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    credentialId: text('credential_id').notNull(),
+    publicKey: text('public_key').notNull(),
+    counter: bigint('counter', { mode: 'number' }).notNull().default(0),
+    deviceType: text('device_type'),
+    transports: text('transports').array(),
+    backedUp: boolean('backed_up').notNull().default(false),
+    displayName: text('display_name'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  },
+  (table) => ({
+    passkeyIdentityUnique: uniqueIndex('passkeys_project_credential_unique').on(
+      table.projectId,
+      table.credentialId,
+    ),
   }),
 )

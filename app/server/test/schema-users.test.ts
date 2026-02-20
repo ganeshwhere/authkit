@@ -1,7 +1,16 @@
 import { getTableColumns } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
-import { projects, sessions, userPasswords, users, verificationTokens } from '../src/db/schema'
+import {
+  oauthAccounts,
+  passkeys,
+  projects,
+  sessions,
+  userMfa,
+  userPasswords,
+  users,
+  verificationTokens,
+} from '../src/db/schema'
 
 describe('schema - foundational tables', () => {
   it('includes project user and password tables', () => {
@@ -23,5 +32,16 @@ describe('schema - foundational tables', () => {
     expect(sessionColumns.tokenFamily).toBeDefined()
     expect(tokenColumns.type).toBeDefined()
     expect(tokenColumns.usedAt).toBeDefined()
+  })
+
+  it('includes oauth mfa and passkey columns', () => {
+    const oauthColumns = getTableColumns(oauthAccounts)
+    const mfaColumns = getTableColumns(userMfa)
+    const passkeyColumns = getTableColumns(passkeys)
+
+    expect(oauthColumns.providerUserId).toBeDefined()
+    expect(mfaColumns.backupCodes).toBeDefined()
+    expect(passkeyColumns.credentialId).toBeDefined()
+    expect(passkeyColumns.counter).toBeDefined()
   })
 })
