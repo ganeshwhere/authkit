@@ -39,6 +39,8 @@ export const Errors = {
     new AuthKitError('INVALID_REFRESH_TOKEN', 'Invalid refresh token', 401),
   TOKEN_REUSE_DETECTED: (): AuthKitError =>
     new AuthKitError('TOKEN_REUSE_DETECTED', 'Session security violation detected', 401),
+  INVALID_CSRF_TOKEN: (): AuthKitError =>
+    new AuthKitError('INVALID_CSRF_TOKEN', 'CSRF token validation failed', 403),
   UNAUTHORIZED: (): AuthKitError => new AuthKitError('UNAUTHORIZED', 'Authentication required', 401),
   FORBIDDEN: (): AuthKitError => new AuthKitError('FORBIDDEN', 'Insufficient permissions', 403),
   RATE_LIMIT_EXCEEDED: (): AuthKitError =>

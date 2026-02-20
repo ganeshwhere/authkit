@@ -1,8 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
 
-const authPlugin: FastifyPluginAsync = async () => {
-  // Implemented in subsequent commits.
+import csrfMiddleware from '../middleware/csrf'
+
+const authPlugin: FastifyPluginAsync = async (server) => {
+  await server.register(csrfMiddleware)
 }
 
 export default fp(authPlugin, { name: 'auth' })
