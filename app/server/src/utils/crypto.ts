@@ -3,11 +3,19 @@ import {
   createDecipheriv,
   createHash,
   createHmac,
+  generateKeyPair as generateKeyPairCallback,
   randomBytes,
   timingSafeEqual,
+  type KeyObject,
 } from 'node:crypto'
+import { promisify } from 'node:util'
 
 import argon2 from 'argon2'
+import { importPKCS8, importSPKI, jwtVerify, SignJWT } from 'jose'
+
+import type { AccessTokenPayload } from '../types/auth'
+
+const generateKeyPair = promisify(generateKeyPairCallback)
 
 const ARGON2_OPTIONS: argon2.Options & { raw?: false } = {
   type: argon2.argon2id,
@@ -15,6 +23,14 @@ const ARGON2_OPTIONS: argon2.Options & { raw?: false } = {
   timeCost: 3,
   parallelism: 4,
   hashLength: 32,
+}
+
+function keyObjectToPem(key: KeyObject, type: 'private' | 'public'): string {
+  if (type === 'private') {
+    return key.export({ format: 'pem', type: 'pkcs8' }).toString()
+  }
+
+  return key.export({ format: 'pem', type: 'spki' }).toString()
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -88,4 +104,64 @@ export function decrypt(ciphertext: string, key: Buffer): string {
 
   const decrypted = Buffer.concat([decipher.update(payload), decipher.final()])
   return decrypted.toString('utf8')
+}
+
+export async function signAccessToken(
+  payload: AccessTokenPayload,
+  privateKey: KeyObject,
+): Promise<string> {
+  const privatePem = keyObjectToPem(privateKey, 'private')
+  const key = await importPKCS8(privatePem, 'RS256')
+
+  const { iat, exp, ...claims } = payload
+
+  return new SignJWT(claims)
+    .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })
+    .setIssuedAt(iat)
+    .setExpirationTime(exp)
+    .setIssuer(payload.iss)
+    .setSubject(payload.sub)
+    .sign(key)
+}
+
+export async function verifyAccessToken(
+  token: string,
+  publicKey: KeyObject,
+): Promise<AccessTokenPayload> {
+  const publicPem = keyObjectToPem(publicKey, 'public')
+  const key = await importSPKI(publicPem, 'RS256')
+
+  const { payload } = await jwtVerify(token, key, {
+    algorithms: ['RS256'],
+  })
+
+  return {
+    sub: String(payload.sub),
+    sid: String(payload.sid),
+    pid: String(payload.pid),
+    email: String(payload.email),
+    emailVerified: Boolean(payload.emailVerified),
+    iat: Number(payload.iat),
+    exp: Number(payload.exp),
+    iss: String(payload.iss),
+  }
+}
+
+export async function generateRSAKeyPair(): Promise<{ privateKey: string; publicKey: string }> {
+  const { privateKey, publicKey } = await generateKeyPair('rsa', {
+    modulusLength: 2048,
+    publicKeyEncoding: {
+      format: 'pem',
+      type: 'spki',
+    },
+    privateKeyEncoding: {
+      format: 'pem',
+      type: 'pkcs8',
+    },
+  })
+
+  return {
+    privateKey,
+    publicKey,
+  }
 }
