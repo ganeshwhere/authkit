@@ -11,6 +11,12 @@ import {
   setRefreshTokenCookie,
 } from '../../utils/tokens'
 
+type UsedRefreshMarker = {
+  tokenFamily: string
+  userId: string
+  projectId: string
+}
+
 function parseCookieHeader(cookieHeader?: string): Record<string, string> {
   if (!cookieHeader) {
     return {}
@@ -48,6 +54,44 @@ function getRefreshToken(request: FastifyRequest): string {
   return cookieToken
 }
 
+function parseUsedMarker(value: string | null): UsedRefreshMarker | null {
+  if (!value) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(value) as UsedRefreshMarker
+
+    if (!parsed.tokenFamily || !parsed.projectId || !parsed.userId) {
+      return null
+    }
+
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+async function handleReuseDetection(
+  request: FastifyRequest,
+  marker: UsedRefreshMarker,
+): Promise<never> {
+  await request.server.dbAdapter.revokeSessionFamily(marker.tokenFamily)
+
+  await request.server.dbAdapter.createAuditLog({
+    projectId: marker.projectId,
+    userId: marker.userId,
+    event: 'session.compromised',
+    ipAddress: request.ip,
+    userAgent: request.headers['user-agent'] as string | undefined,
+    metadata: {
+      reason: 'refresh_token_reuse_detected',
+    },
+  })
+
+  throw Errors.TOKEN_REUSE_DETECTED()
+}
+
 export async function refreshHandler(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -58,11 +102,22 @@ export async function refreshHandler(
   const existingSession = await request.server.dbAdapter.getSessionByTokenHash(refreshTokenHash)
 
   if (!existingSession) {
+    const markerRaw = await request.server.cache.get(`session:used_refresh:${refreshTokenHash}`)
+    const marker = parseUsedMarker(markerRaw)
+
+    if (marker) {
+      await handleReuseDetection(request, marker)
+    }
+
     throw Errors.INVALID_REFRESH_TOKEN()
   }
 
   if (existingSession.revokedAt) {
-    throw Errors.INVALID_REFRESH_TOKEN()
+    await handleReuseDetection(request, {
+      tokenFamily: existingSession.tokenFamily,
+      userId: existingSession.userId,
+      projectId: existingSession.projectId,
+    })
   }
 
   if (existingSession.expiresAt.getTime() <= Date.now()) {
@@ -76,6 +131,16 @@ export async function refreshHandler(
   }
 
   await request.server.dbAdapter.revokeSession(existingSession.tokenHash)
+
+  await request.server.cache.set(
+    `session:used_refresh:${existingSession.tokenHash}`,
+    JSON.stringify({
+      tokenFamily: existingSession.tokenFamily,
+      userId: existingSession.userId,
+      projectId: existingSession.projectId,
+    }),
+    config.sessionDurationSeconds,
+  )
 
   const nextRefresh = issueRefreshToken(32)
   const nextSession = await request.server.dbAdapter.createSession({

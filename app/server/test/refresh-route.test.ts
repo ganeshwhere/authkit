@@ -28,11 +28,40 @@ function hashToken(value: string): string {
   return createHash('sha256').update(value).digest('hex')
 }
 
+function createCache() {
+  const store = new Map<string, string>()
+
+  return {
+    async get(key: string): Promise<string | null> {
+      return store.get(key) ?? null
+    },
+    async set(key: string, value: string): Promise<void> {
+      store.set(key, value)
+    },
+    async delete(key: string): Promise<void> {
+      store.delete(key)
+    },
+    async increment(key: string): Promise<number> {
+      const next = Number(store.get(key) ?? '0') + 1
+      store.set(key, String(next))
+      return next
+    },
+    async expire(_key: string, _ttlSeconds: number): Promise<void> {
+      // no-op
+    },
+    async exists(key: string): Promise<boolean> {
+      return store.has(key)
+    },
+  }
+}
+
 function createAdapter(overrides: Record<string, unknown> = {}) {
   return {
     getSessionByTokenHash: vi.fn(async () => null),
     getUserById: vi.fn(async () => null),
     revokeSession: vi.fn(async () => undefined),
+    revokeSessionFamily: vi.fn(async () => undefined),
+    createAuditLog: vi.fn(async () => undefined),
     createSession: vi.fn(async () => ({
       id: 'session_new',
       userId: 'user_1',
@@ -54,6 +83,7 @@ describe('POST /v1/auth/refresh', () => {
   it('rejects invalid refresh token', async () => {
     const server = Fastify()
     server.decorate('dbAdapter', createAdapter() as never)
+    server.decorate('cache', createCache())
     server.setErrorHandler(globalErrorHandler)
 
     await server.register(authRoutes, { prefix: '/v1/auth' })
@@ -112,6 +142,7 @@ describe('POST /v1/auth/refresh', () => {
 
     const server = Fastify()
     server.decorate('dbAdapter', adapter as never)
+    server.decorate('cache', createCache())
     server.setErrorHandler(globalErrorHandler)
 
     await server.register(authRoutes, { prefix: '/v1/auth' })
@@ -127,6 +158,44 @@ describe('POST /v1/auth/refresh', () => {
     expect(response.statusCode).toBe(200)
     expect(typeof response.json().data.accessToken).toBe('string')
     expect(adapter.revokeSession).toHaveBeenCalled()
+
+    await server.close()
+  })
+
+  it('detects refresh token reuse and revokes session family', async () => {
+    const reusedToken = 'reused-token'
+    const reusedHash = hashToken(reusedToken)
+    const cache = createCache()
+
+    await cache.set(
+      `session:used_refresh:${reusedHash}`,
+      JSON.stringify({
+        tokenFamily: 'family_1',
+        userId: 'user_1',
+        projectId: 'project_1',
+      }),
+    )
+
+    const adapter = createAdapter()
+
+    const server = Fastify()
+    server.decorate('dbAdapter', adapter as never)
+    server.decorate('cache', cache)
+    server.setErrorHandler(globalErrorHandler)
+
+    await server.register(authRoutes, { prefix: '/v1/auth' })
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/v1/auth/refresh',
+      headers: {
+        cookie: `refresh_token=${reusedToken}`,
+      },
+    })
+
+    expect(response.statusCode).toBe(401)
+    expect(response.json().error.code).toBe('TOKEN_REUSE_DETECTED')
+    expect(adapter.revokeSessionFamily).toHaveBeenCalledWith('family_1')
 
     await server.close()
   })
