@@ -1,6 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify'
 
 import { forgotPasswordHandler } from '../modules/auth/forgot-password'
+import {
+  magicLinkSendHandler,
+  magicLinkVerifyHandler,
+} from '../modules/auth/magic-link'
 import { refreshHandler } from '../modules/auth/refresh'
 import { resetPasswordHandler } from '../modules/auth/reset-password'
 import { signinHandler } from '../modules/auth/signin'
@@ -12,6 +16,8 @@ const authRoutes: FastifyPluginAsync = async (server) => {
   server.post('/signin', signinHandler)
   server.post('/signout', signoutHandler)
   server.post('/refresh', refreshHandler)
+  server.post('/magic-link/send', magicLinkSendHandler)
+  server.get('/magic-link/verify', magicLinkVerifyHandler)
   server.post('/forgot-password', forgotPasswordHandler)
   server.post('/reset-password', resetPasswordHandler)
   server.get('/_status', async () => ({ data: { ok: true }, error: null }))
