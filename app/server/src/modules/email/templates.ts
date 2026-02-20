@@ -1,3 +1,9 @@
+import {
+  renderMagicLinkTemplate,
+  renderPasswordResetTemplate,
+  renderVerifyEmailTemplate,
+} from './templates/auth-templates'
+
 export type EmailTemplateType =
   | 'magic_link'
   | 'email_verify'
@@ -49,52 +55,18 @@ export function renderEmailTemplate(
   input: EmailTemplateInput,
 ): RenderedEmailTemplate {
   const actionUrl = input.actionUrl ?? 'https://example.com'
-  const expiresInText = input.expiresInText ?? '15 minutes'
   const primary = input.primaryColor ?? '#2563eb'
 
   if (template === 'magic_link') {
-    const shell = renderShell(
-      `<p>Use the sign-in link below to continue.</p>
-       <p><a href="${actionUrl}" style="display:inline-block;padding:12px 18px;background:${primary};color:#fff;text-decoration:none;border-radius:8px;">Sign in securely</a></p>
-       <p style="font-size:14px;color:#334155;">This link expires in ${expiresInText}. If you did not request this, you can ignore this email.</p>`,
-      `Use this sign-in link: ${actionUrl}\nThis link expires in ${expiresInText}.`,
-      input,
-    )
-
-    return {
-      ...shell,
-      subject: 'Your sign-in link',
-    }
+    return renderMagicLinkTemplate(input)
   }
 
   if (template === 'email_verify') {
-    const shell = renderShell(
-      `<p>Verify your email to finish setup.</p>
-       <p><a href="${actionUrl}" style="display:inline-block;padding:12px 18px;background:${primary};color:#fff;text-decoration:none;border-radius:8px;">Verify email</a></p>
-       <p style="font-size:14px;color:#334155;">This link expires in ${expiresInText}.</p>`,
-      `Verify your email: ${actionUrl}\nThis link expires in ${expiresInText}.`,
-      input,
-    )
-
-    return {
-      ...shell,
-      subject: 'Verify your email',
-    }
+    return renderVerifyEmailTemplate(input)
   }
 
   if (template === 'password_reset') {
-    const shell = renderShell(
-      `<p>Reset your password with the secure link below.</p>
-       <p><a href="${actionUrl}" style="display:inline-block;padding:12px 18px;background:${primary};color:#fff;text-decoration:none;border-radius:8px;">Reset password</a></p>
-       <p style="font-size:14px;color:#334155;">This link expires in ${expiresInText}. If this wasn’t you, ignore this message.</p>`,
-      `Reset your password: ${actionUrl}\nThis link expires in ${expiresInText}.`,
-      input,
-    )
-
-    return {
-      ...shell,
-      subject: 'Reset your password',
-    }
+    return renderPasswordResetTemplate(input)
   }
 
   if (template === 'welcome') {
