@@ -2,8 +2,9 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { Pool, type PoolConfig } from 'pg'
 
 import type { AppConfig } from '../config'
+import * as schema from './schema'
 
-export type AuthKitDatabase = NodePgDatabase<Record<string, never>>
+export type AuthKitDatabase = NodePgDatabase<typeof schema>
 
 export type DatabaseClient = {
   pool: Pool
@@ -21,7 +22,7 @@ export function createDatabasePoolConfig(config: AppConfig): PoolConfig {
 
 export function createDatabaseClient(config: AppConfig): DatabaseClient {
   const pool = new Pool(createDatabasePoolConfig(config))
-  const db = drizzle(pool)
+  const db = drizzle(pool, { schema })
 
   return {
     pool,
