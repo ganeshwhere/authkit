@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
+import type { EmailMessage } from '../src/types/adapters'
 import { EmailService } from '../src/modules/email/service'
 
 describe('EmailService', () => {
   it('renders and sends a template message through adapter', async () => {
-    const send = vi.fn(async () => undefined)
+    const send = vi.fn<(message: EmailMessage) => Promise<void>>(async () => undefined)
     const service = new EmailService({ send }, 'auth@example.com')
 
     await service.sendTemplate({
@@ -18,15 +19,18 @@ describe('EmailService', () => {
     })
 
     expect(send).toHaveBeenCalledTimes(1)
-    expect(send.mock.calls[0]?.[0]).toMatchObject({
-      to: 'user@example.com',
-      from: 'auth@example.com',
-      subject: 'Your sign-in link',
-    })
+    expect(send).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        to: 'user@example.com',
+        from: 'auth@example.com',
+        subject: 'Your sign-in link',
+      }),
+    )
   })
 
   it('sends raw message with default from', async () => {
-    const send = vi.fn(async () => undefined)
+    const send = vi.fn<(message: EmailMessage) => Promise<void>>(async () => undefined)
     const service = new EmailService({ send }, 'auth@example.com')
 
     await service.send({

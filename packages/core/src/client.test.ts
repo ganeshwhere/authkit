@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { AuthKitClient } from './client'
 import { AuthKitError } from './errors'
+import type { AuthState } from './types'
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -14,7 +15,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe('AuthKitClient', () => {
   it('signs up user and stores auth state', async () => {
-    const fetcher = vi.fn(async () =>
+    const fetcher = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async () =>
       jsonResponse({
         data: {
           user: {
@@ -61,10 +62,14 @@ describe('AuthKitClient', () => {
 
     expect(result.user.email).toBe('user@example.com')
     expect(client.getAuthState().isSignedIn).toBe(true)
+    expect(fetcher).toHaveBeenCalledTimes(1)
 
-    const [url, init] = fetcher.mock.calls[0] as [string, RequestInit]
+    const firstCall = fetcher.mock.calls[0]
+    const url = firstCall?.[0]
+    const init = firstCall?.[1]
+
     expect(url).toBe('https://api.example.com/v1/auth/signup')
-    expect((init.headers as Record<string, string>)['x-authkit-project-id']).toBe('project_1')
+    expect((init?.headers as Record<string, string>)['x-authkit-project-id']).toBe('project_1')
   })
 
   it('returns mfa challenge without mutating signed-in state', async () => {
@@ -200,7 +205,7 @@ describe('AuthKitClient', () => {
     })
 
     const signedInStates: boolean[] = []
-    const unsubscribe = client.onAuthStateChange((state) => {
+    const unsubscribe = client.onAuthStateChange((state: AuthState) => {
       signedInStates.push(state.isSignedIn)
     })
 

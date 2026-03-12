@@ -1,6 +1,5 @@
 import type { QueueOptions, WorkerOptions } from 'bullmq'
 import { Queue, Worker } from 'bullmq'
-import type Redis from 'ioredis'
 
 import type { DatabaseAdapter } from '../../types/adapters'
 import { buildWebhookSignatureHeader } from './signature'
@@ -26,12 +25,12 @@ export function nextWebhookRetryDelayMs(currentAttempt: number): number | null {
     return null
   }
 
-  return RETRY_DELAYS_MS[nextIndex]
+  return RETRY_DELAYS_MS[nextIndex] ?? null
 }
 
-export function createWebhookQueue(redis: Redis): Queue<WebhookDeliveryJobPayload> {
+export function createWebhookQueue(redis: unknown): Queue<WebhookDeliveryJobPayload> {
   const options: QueueOptions = {
-    connection: redis,
+    connection: redis as QueueOptions['connection'],
   }
 
   return new Queue<WebhookDeliveryJobPayload>(WEBHOOK_QUEUE_NAME, options)
@@ -109,12 +108,12 @@ export async function processWebhookDeliveryJob(params: {
 }
 
 export function createWebhookWorker(params: {
-  redis: Redis
+  redis: unknown
   dbAdapter: DatabaseAdapter
   queue: Queue<WebhookDeliveryJobPayload>
 }): Worker<WebhookDeliveryJobPayload> {
   const workerOptions: WorkerOptions = {
-    connection: params.redis,
+    connection: params.redis as WorkerOptions['connection'],
   }
 
   return new Worker<WebhookDeliveryJobPayload>(

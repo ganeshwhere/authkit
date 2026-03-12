@@ -43,14 +43,16 @@ export async function magicLinkSendHandler(
 
   const rawToken = generateSecureToken(32)
 
-  await request.server.dbAdapter.createVerificationToken({
+  const verificationTokenInput = {
     projectId,
-    userId: user?.id,
     email,
     tokenHash: generateTokenHash(rawToken),
     type: 'magic_link',
     expiresAt: new Date(Date.now() + config.magicLinkTtlSeconds * 1000),
-  })
+    ...(user?.id ? { userId: user.id } : {}),
+  } satisfies Parameters<typeof request.server.dbAdapter.createVerificationToken>[0]
+
+  await request.server.dbAdapter.createVerificationToken(verificationTokenInput)
 
   request.log.info(
     {
@@ -107,15 +109,19 @@ export async function magicLinkVerifyHandler(
   const tokenFamily = createTokenFamilyId()
   const expiresAt = new Date(Date.now() + config.sessionDurationSeconds * 1000)
 
-  const session = await request.server.dbAdapter.createSession({
+  const sessionInput = {
     userId: user.id,
     projectId: token.projectId,
     tokenHash: refresh.tokenHash,
     tokenFamily,
     ipAddress: request.ip,
-    userAgent: request.headers['user-agent'] as string | undefined,
     expiresAt,
-  })
+    ...(typeof request.headers['user-agent'] === 'string'
+      ? { userAgent: request.headers['user-agent'] }
+      : {}),
+  }
+
+  const session = await request.server.dbAdapter.createSession(sessionInput)
 
   const accessToken = await issueAccessToken({
     context: {

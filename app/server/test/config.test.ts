@@ -1,7 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { ZodError } from 'zod'
 
-import { loadConfig } from '../src/config'
+let loadConfig: typeof import('../src/config').loadConfig
+
+beforeAll(async () => {
+  process.env.BASE_URL = 'https://api.authkit.dev'
+  process.env.DATABASE_URL = 'postgres://authkit:password@localhost:5432/authkit'
+  process.env.JWT_PRIVATE_KEY = 'private'
+  process.env.JWT_PUBLIC_KEY = 'public'
+  process.env.ENCRYPTION_KEY = 'a'.repeat(64)
+  process.env.HMAC_SECRET = 'x'.repeat(32)
+
+  ;({ loadConfig } = await import('../src/config'))
+})
 
 function baseEnv(overrides: Record<string, string | undefined> = {}): Record<string, string> {
   return {

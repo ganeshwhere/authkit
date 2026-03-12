@@ -34,12 +34,14 @@ export async function emitAuditEvent(
   server: FastifyInstance,
   input: AuditEventInput,
 ): Promise<void> {
+  const userAgentHeader = input.request?.headers['user-agent']
+
   await server.dbAdapter.createAuditLog({
     projectId: input.projectId,
-    userId: input.userId,
     event: input.event,
-    ipAddress: input.request?.ip,
-    userAgent: input.request?.headers['user-agent'] as string | undefined,
     metadata: input.metadata ?? {},
+    ...(input.userId ? { userId: input.userId } : {}),
+    ...(input.request?.ip ? { ipAddress: input.request.ip } : {}),
+    ...(typeof userAgentHeader === 'string' ? { userAgent: userAgentHeader } : {}),
   })
 }

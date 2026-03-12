@@ -104,10 +104,11 @@ describe('createAuthKit', () => {
     expect(context.isLoaded.value).toBe(true)
     expect(mock.spies.getAccessToken).toHaveBeenCalledTimes(1)
     expect(mock.spies.getUserProfile).toHaveBeenCalledTimes(1)
+    const firstSession = profile.sessions[0] ?? null
 
     mock.emit({
       user: profile.user,
-      session: profile.sessions[0],
+      session: firstSession,
       accessToken: 'access-token',
       isSignedIn: true,
     })

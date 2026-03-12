@@ -13,7 +13,9 @@ export class AuthKitError extends Error {
     this.name = 'AuthKitError'
     this.code = code
     this.statusCode = statusCode
-    this.details = details
+    if (details) {
+      this.details = details
+    }
   }
 }
 

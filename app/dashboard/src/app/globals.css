@@ -10,6 +10,8 @@
   --brand-soft: rgba(10, 127, 111, 0.12);
   --danger: #c53f54;
   --shadow: 0 16px 40px rgba(17, 20, 27, 0.12);
+  --heading-font: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', sans-serif;
+  --mono-font: 'SF Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
 }
 
 * {

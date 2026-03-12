@@ -84,15 +84,19 @@ export async function signinHandler(
   const tokenFamily = createTokenFamilyId()
   const expiresAt = new Date(Date.now() + config.sessionDurationSeconds * 1000)
 
-  const session = await request.server.dbAdapter.createSession({
+  const sessionInput = {
     userId: user.id,
     projectId,
     tokenHash: refresh.tokenHash,
     tokenFamily,
     ipAddress: request.ip,
-    userAgent: request.headers['user-agent'] as string | undefined,
     expiresAt,
-  })
+    ...(typeof request.headers['user-agent'] === 'string'
+      ? { userAgent: request.headers['user-agent'] }
+      : {}),
+  }
+
+  const session = await request.server.dbAdapter.createSession(sessionInput)
 
   const accessToken = await issueAccessToken({
     context: {

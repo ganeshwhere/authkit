@@ -67,7 +67,7 @@ export function useSignUp(): {
   return {
     signUp: useCallback(
       (email: string, password: string, displayName?: string) =>
-        run(() => client.signUp(email, password, { displayName })),
+        run(() => client.signUp(email, password, displayName ? { displayName } : undefined)),
       [client, run],
     ),
     isLoading,

@@ -26,9 +26,10 @@ describe('createDatabasePoolConfig', () => {
       passwordResetTtlSeconds: 3600,
       emailVerifyTtlSeconds: 86_400,
       emailFrom: 'auth@authkit.dev',
-      smtpUrl: undefined,
       pwnedPasswordsCheck: false,
       requireEmailVerification: false,
+      oauthRedirectAllowlist: [],
+      oauthProviders: {},
     })
 
     expect(poolConfig.connectionString).toBe('postgres://authkit:password@localhost:5432/authkit')

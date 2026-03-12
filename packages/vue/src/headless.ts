@@ -74,7 +74,7 @@ export function useSignUp(): {
 
   return {
     signUp: async (email: string, password: string, displayName?: string) =>
-      run(() => client.signUp(email, password, { displayName })),
+      run(() => client.signUp(email, password, displayName ? { displayName } : undefined)),
     isLoading,
     error,
   }

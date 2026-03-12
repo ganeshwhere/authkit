@@ -31,7 +31,15 @@ import type {
   VerificationToken,
   WebhookDelivery,
   WebhookEndpoint,
-} from '../../../../packages/core/src/adapters/db'
+} from '../../types/adapters'
+
+function assertRow<T>(row: T | undefined, operation: string): T {
+  if (!row) {
+    throw new Error(`Database operation "${operation}" did not return a row`)
+  }
+
+  return row
+}
 
 function mapUser(row: typeof users.$inferSelect): User {
   return {
@@ -158,7 +166,7 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       })
       .returning()
 
-    return mapUser(inserted)
+    return mapUser(assertRow(inserted, 'createUser'))
   }
 
   async getUserById(projectId: string, id: string): Promise<User | null> {
@@ -207,7 +215,7 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       .where(and(eq(users.projectId, projectId), eq(users.id, id), isNull(users.deletedAt)))
       .returning()
 
-    return mapUser(row)
+    return mapUser(assertRow(row, 'updateUser'))
   }
 
   async deleteUser(projectId: string, id: string): Promise<void> {
@@ -294,13 +302,13 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
         projectId: data.projectId,
         tokenHash: data.tokenHash,
         tokenFamily: data.tokenFamily,
-        ipAddress: data.ipAddress,
-        userAgent: data.userAgent,
+        ...(data.ipAddress ? { ipAddress: data.ipAddress } : {}),
+        ...(data.userAgent ? { userAgent: data.userAgent } : {}),
         expiresAt: data.expiresAt,
       })
       .returning()
 
-    return mapSession(row)
+    return mapSession(assertRow(row, 'createSession'))
   }
 
   async getSessionByTokenHash(tokenHash: string): Promise<Session | null> {
@@ -360,7 +368,7 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       .insert(verificationTokens)
       .values({
         projectId: data.projectId,
-        userId: data.userId,
+        ...(data.userId ? { userId: data.userId } : {}),
         email: data.email,
         tokenHash: data.tokenHash,
         type: data.type,
@@ -368,7 +376,7 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       })
       .returning()
 
-    return mapVerificationToken(row)
+    return mapVerificationToken(assertRow(row, 'createVerificationToken'))
   }
 
   async getVerificationToken(
@@ -413,7 +421,7 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       })
       .returning()
 
-    return mapOAuthAccount(row)
+    return mapOAuthAccount(assertRow(row, 'createOAuthAccount'))
   }
 
   async getOAuthAccount(
@@ -509,10 +517,10 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       credentialId: data.credentialId,
       publicKey: data.publicKey,
       counter: data.counter,
-      deviceType: data.deviceType,
-      transports: data.transports,
-      backedUp: data.backedUp,
-      displayName: data.displayName,
+      ...(data.deviceType ? { deviceType: data.deviceType } : {}),
+      ...(data.transports ? { transports: data.transports } : {}),
+      ...(data.backedUp !== undefined ? { backedUp: data.backedUp } : {}),
+      ...(data.displayName ? { displayName: data.displayName } : {}),
     })
   }
 
@@ -570,10 +578,10 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
   }): Promise<void> {
     await this.db.insert(auditLogs).values({
       projectId: data.projectId,
-      userId: data.userId,
+      ...(data.userId ? { userId: data.userId } : {}),
       event: data.event,
-      ipAddress: data.ipAddress,
-      userAgent: data.userAgent,
+      ...(data.ipAddress ? { ipAddress: data.ipAddress } : {}),
+      ...(data.userAgent ? { userAgent: data.userAgent } : {}),
       metadata: data.metadata ?? {},
     })
   }
@@ -587,15 +595,17 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       event?: string
     },
   ): Promise<{ logs: AuditLog[]; total: number }> {
-    let filter = eq(auditLogs.projectId, projectId)
+    const filters = [eq(auditLogs.projectId, projectId)]
 
     if (options.userId) {
-      filter = and(filter, eq(auditLogs.userId, options.userId))
+      filters.push(eq(auditLogs.userId, options.userId))
     }
 
     if (options.event) {
-      filter = and(filter, eq(auditLogs.event, options.event))
+      filters.push(eq(auditLogs.event, options.event))
     }
+
+    const filter = and(...filters)
 
     const rows = await this.db
       .select()
@@ -634,7 +644,7 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       })
       .returning()
 
-    return mapWebhookEndpoint(row)
+    return mapWebhookEndpoint(assertRow(row, 'createWebhookEndpoint'))
   }
 
   async listWebhookEndpoints(projectId: string): Promise<WebhookEndpoint[]> {
@@ -660,15 +670,15 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
     const [row] = await this.db
       .update(webhookEndpoints)
       .set({
-        url: data.url,
-        secret: data.secret,
-        events: data.events,
-        enabled: data.enabled,
+        ...(data.url ? { url: data.url } : {}),
+        ...(data.secret ? { secret: data.secret } : {}),
+        ...(data.events ? { events: data.events } : {}),
+        ...(data.enabled !== undefined ? { enabled: data.enabled } : {}),
       })
       .where(and(eq(webhookEndpoints.projectId, projectId), eq(webhookEndpoints.id, id)))
       .returning()
 
-    return mapWebhookEndpoint(row)
+    return mapWebhookEndpoint(assertRow(row, 'updateWebhookEndpoint'))
   }
 
   async deleteWebhookEndpoint(projectId: string, id: string): Promise<void> {
@@ -693,7 +703,7 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       })
       .returning()
 
-    return mapWebhookDelivery(row)
+    return mapWebhookDelivery(assertRow(row, 'createWebhookDelivery'))
   }
 
   async markWebhookDeliveryResult(data: {
@@ -706,7 +716,7 @@ class DrizzleDatabaseAdapter implements DatabaseAdapter {
       .update(webhookDeliveries)
       .set({
         responseStatus: data.responseStatus,
-        responseBody: data.responseBody,
+        ...(data.responseBody !== undefined ? { responseBody: data.responseBody } : {}),
         deliveredAt: data.delivered ? new Date() : null,
         failedAt: data.delivered ? null : new Date(),
       })

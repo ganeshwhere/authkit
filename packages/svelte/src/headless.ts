@@ -77,7 +77,9 @@ export function createSignUpActions(store: AuthKitStore): {
 
   return {
     signUp: async (email: string, password: string, displayName?: string) =>
-      asyncState.run(() => store.client.signUp(email, password, { displayName })),
+      asyncState.run(() =>
+        store.client.signUp(email, password, displayName ? { displayName } : undefined),
+      ),
     isLoading: asyncState.isLoading,
     error: asyncState.error,
   }

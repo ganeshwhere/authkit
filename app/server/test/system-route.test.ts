@@ -1,6 +1,7 @@
 import { generateKeyPairSync } from 'node:crypto'
 
 import Fastify from 'fastify'
+import type { Pool, QueryResult } from 'pg'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 let systemRoutes: (typeof import('../src/routes/system'))['default']
@@ -25,12 +26,22 @@ beforeAll(async () => {
 describe('system routes', () => {
   it('returns jwks keys', async () => {
     const server = Fastify()
-    server.decorate('dbPool', {
-      query: async () => ({ rows: [{ ok: 1 }] }),
-    })
-    server.decorate('redis', {
+    const dbPool = {
+      query: async (): Promise<QueryResult<{ ok: number }>> =>
+        ({
+          command: 'SELECT',
+          rowCount: 1,
+          oid: 0,
+          rows: [{ ok: 1 }],
+          fields: [],
+        }) as QueryResult<{ ok: number }>,
+    } as Pick<Pool, 'query'>
+    const redis = {
       ping: async () => 'PONG',
-    })
+    }
+
+    server.decorate('dbPool', dbPool as Pool)
+    server.decorate('redis', redis as never)
 
     await server.register(systemRoutes)
 
@@ -44,12 +55,22 @@ describe('system routes', () => {
 
   it('returns ready status when dependencies are healthy', async () => {
     const server = Fastify()
-    server.decorate('dbPool', {
-      query: async () => ({ rows: [{ ok: 1 }] }),
-    })
-    server.decorate('redis', {
+    const dbPool = {
+      query: async (): Promise<QueryResult<{ ok: number }>> =>
+        ({
+          command: 'SELECT',
+          rowCount: 1,
+          oid: 0,
+          rows: [{ ok: 1 }],
+          fields: [],
+        }) as QueryResult<{ ok: number }>,
+    } as Pick<Pool, 'query'>
+    const redis = {
       ping: async () => 'PONG',
-    })
+    }
+
+    server.decorate('dbPool', dbPool as Pool)
+    server.decorate('redis', redis as never)
 
     await server.register(systemRoutes)
 

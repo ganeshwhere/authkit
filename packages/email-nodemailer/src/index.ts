@@ -15,11 +15,13 @@ export function createNodemailerAdapter(options: NodemailerAdapterOptions): Emai
     async send(message: EmailMessage): Promise<void> {
       await transporter.sendMail({
         to: message.to,
-        from: message.from ?? options.defaultFrom,
-        replyTo: message.replyTo,
         subject: message.subject,
         html: message.html,
         text: message.text,
+        ...((message.from ?? options.defaultFrom)
+          ? { from: message.from ?? options.defaultFrom }
+          : {}),
+        ...(message.replyTo ? { replyTo: message.replyTo } : {}),
       })
     },
   }

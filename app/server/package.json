@@ -30,9 +30,13 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "@types/pg": "^8.11.11",
     "drizzle-kit": "^0.30.0",
+    "eslint": "^9.39.4",
     "tsup": "^8.3.5",
-    "tsx": "^4.19.2"
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.9"
   }
 }

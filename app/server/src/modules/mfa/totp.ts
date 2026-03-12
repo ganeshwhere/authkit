@@ -77,6 +77,10 @@ export function verifyAndConsumeBackupCode(
   for (let index = 0; index < hashedBackupCodes.length; index += 1) {
     const candidate = hashedBackupCodes[index]
 
+    if (!candidate) {
+      continue
+    }
+
     if (timingSafeHashMatch(normalizedHash, candidate)) {
       const remaining = hashedBackupCodes.filter((_, current) => current !== index)
 

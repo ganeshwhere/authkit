@@ -88,10 +88,10 @@ export async function getAuditLogsHandler(
   const query = auditLogsQuerySchema.parse(request.query)
 
   const result = await request.server.dbAdapter.getAuditLogs(projectId, {
-    userId: query.userId,
-    event: query.event,
     limit: query.limit,
     offset: query.offset,
+    ...(query.userId ? { userId: query.userId } : {}),
+    ...(query.event ? { event: query.event } : {}),
   })
 
   reply.send({
@@ -114,7 +114,7 @@ export async function createWebhookHandler(
     url: body.url,
     secret: body.secret,
     events: body.events,
-    enabled: body.enabled,
+    ...(body.enabled !== undefined ? { enabled: body.enabled } : {}),
   })
 
   reply.code(201).send({
@@ -154,10 +154,10 @@ export async function updateWebhookHandler(
     projectId,
     request.params.id,
     {
-      url: body.url,
-      secret: body.secret,
-      events: body.events,
-      enabled: body.enabled,
+      ...(body.url ? { url: body.url } : {}),
+      ...(body.secret ? { secret: body.secret } : {}),
+      ...(body.events ? { events: body.events } : {}),
+      ...(body.enabled !== undefined ? { enabled: body.enabled } : {}),
     },
   )
 

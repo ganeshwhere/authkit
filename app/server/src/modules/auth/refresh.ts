@@ -161,15 +161,19 @@ export async function refreshHandler(
   )
 
   const nextRefresh = issueRefreshToken(32)
-  const nextSession = await request.server.dbAdapter.createSession({
+  const nextSessionInput = {
     userId: existingSession.userId,
     projectId: existingSession.projectId,
     tokenHash: nextRefresh.tokenHash,
     tokenFamily: existingSession.tokenFamily,
     ipAddress: request.ip,
-    userAgent: request.headers['user-agent'] as string | undefined,
     expiresAt: existingSession.expiresAt,
-  })
+    ...(typeof request.headers['user-agent'] === 'string'
+      ? { userAgent: request.headers['user-agent'] }
+      : {}),
+  }
+
+  const nextSession = await request.server.dbAdapter.createSession(nextSessionInput)
 
   const accessToken = await issueAccessToken({
     context: {

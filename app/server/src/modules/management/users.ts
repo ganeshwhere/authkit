@@ -36,7 +36,7 @@ export async function listUsersHandler(
   const result = await request.server.dbAdapter.listUsers(projectId, {
     limit: query.limit,
     offset: query.offset,
-    search: query.search,
+    ...(query.search ? { search: query.search } : {}),
   })
 
   reply.send({
@@ -55,10 +55,10 @@ export async function createUserHandler(
 
   const user = await request.server.dbAdapter.createUser(projectId, {
     email: body.email.trim().toLowerCase(),
-    emailVerified: body.emailVerified,
-    displayName: body.displayName,
-    avatarUrl: body.avatarUrl,
-    metadata: body.metadata,
+    ...(body.emailVerified !== undefined ? { emailVerified: body.emailVerified } : {}),
+    ...(body.displayName ? { displayName: body.displayName } : {}),
+    ...(body.avatarUrl ? { avatarUrl: body.avatarUrl } : {}),
+    ...(body.metadata ? { metadata: body.metadata } : {}),
   })
 
   reply.code(201).send({
@@ -95,11 +95,11 @@ export async function updateUserHandler(
   const body = updateUserBodySchema.parse(request.body)
 
   const user = await request.server.dbAdapter.updateUser(projectId, request.params.id, {
-    email: body.email?.trim().toLowerCase(),
-    emailVerified: body.emailVerified,
-    displayName: body.displayName,
-    avatarUrl: body.avatarUrl,
-    metadata: body.metadata,
+    ...(body.email?.trim().toLowerCase() ? { email: body.email.trim().toLowerCase() } : {}),
+    ...(body.emailVerified !== undefined ? { emailVerified: body.emailVerified } : {}),
+    ...(body.displayName ? { displayName: body.displayName } : {}),
+    ...(body.avatarUrl ? { avatarUrl: body.avatarUrl } : {}),
+    ...(body.metadata ? { metadata: body.metadata } : {}),
   })
 
   reply.send({

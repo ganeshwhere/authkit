@@ -40,6 +40,22 @@ type PasskeyChallengeState = {
   challenge: string
 }
 
+type AuthenticatorTransportFuture =
+  | 'ble'
+  | 'cable'
+  | 'hybrid'
+  | 'internal'
+  | 'nfc'
+  | 'smart-card'
+  | 'usb'
+
+type StoredWebAuthnCredential = {
+  id: string
+  publicKey: Uint8Array
+  counter: number
+  transports?: AuthenticatorTransportFuture[]
+}
+
 const challengeStateSchema = z.object({
   type: z.enum(['registration', 'authentication']),
   projectId: z.string().min(1),
@@ -95,11 +111,34 @@ async function consumeChallenge(
 }
 
 function encodeToBase64Url(value: Uint8Array | ArrayBuffer | Buffer): string {
+  if (value instanceof ArrayBuffer) {
+    return Buffer.from(new Uint8Array(value)).toString('base64url')
+  }
+
   return Buffer.from(value).toString('base64url')
 }
 
 function decodeBase64Url(value: string): Buffer {
   return Buffer.from(value, 'base64url')
+}
+
+function toAuthenticatorTransports(
+  transports: string[] | undefined,
+): AuthenticatorTransportFuture[] | undefined {
+  if (!transports || transports.length === 0) {
+    return undefined
+  }
+
+  return transports.filter(
+    (transport): transport is AuthenticatorTransportFuture =>
+      transport === 'ble' ||
+      transport === 'cable' ||
+      transport === 'hybrid' ||
+      transport === 'internal' ||
+      transport === 'nfc' ||
+      transport === 'smart-card' ||
+      transport === 'usb',
+  )
 }
 
 function readCredentialId(credential: Record<string, unknown>): string {
@@ -173,6 +212,14 @@ export async function passkeyRegisterBeginHandler(
   }
 
   const existingPasskeys = await request.server.dbAdapter.getPasskeysByUserId(user.id)
+  const excludeCredentials = existingPasskeys.map((passkey) => {
+    const transports = toAuthenticatorTransports(passkey.transports)
+
+    return {
+      id: passkey.credentialId,
+      ...(transports && transports.length > 0 ? { transports } : {}),
+    }
+  })
 
   const options = await generateRegistrationOptions({
     rpName: 'AuthKit',
@@ -185,11 +232,7 @@ export async function passkeyRegisterBeginHandler(
       residentKey: 'preferred',
       userVerification: 'preferred',
     },
-    excludeCredentials: existingPasskeys.map((passkey) => ({
-      id: decodeBase64Url(passkey.credentialId),
-      transports: passkey.transports,
-      type: 'public-key',
-    })),
+    excludeCredentials,
   })
 
   await storeChallenge(request, {
@@ -289,10 +332,10 @@ export async function passkeyRegisterCompleteHandler(
       credentialId,
       publicKey,
       counter: counterRaw ?? 0,
-      deviceType,
       transports,
       backedUp,
-      displayName: parsed.displayName,
+      ...(deviceType ? { deviceType } : {}),
+      ...(parsed.displayName ? { displayName: parsed.displayName } : {}),
     })
   } catch {
     throw Errors.PASSKEY_ALREADY_EXISTS()
@@ -352,7 +395,9 @@ export async function passkeyAuthenticateBeginHandler(
   const parsed = passkeyAuthenticateBeginBodySchema.parse(request.body)
 
   let userId: string | null = null
-  let allowCredentials: Array<{ id: Buffer; type: 'public-key'; transports?: string[] }> | undefined
+  let allowCredentials:
+    | Array<{ id: string; transports?: AuthenticatorTransportFuture[] }>
+    | undefined
 
   if (parsed.email) {
     const user = await request.server.dbAdapter.getUserByEmail(projectId, parsed.email.trim().toLowerCase())
@@ -361,19 +406,24 @@ export async function passkeyAuthenticateBeginHandler(
       userId = user.id
       const passkeys = await request.server.dbAdapter.getPasskeysByUserId(user.id)
 
-      allowCredentials = passkeys.map((passkey) => ({
-        id: decodeBase64Url(passkey.credentialId),
-        type: 'public-key',
-        transports: passkey.transports,
-      }))
+      allowCredentials = passkeys.map((passkey) => {
+        const transports = toAuthenticatorTransports(passkey.transports)
+
+        return {
+          id: passkey.credentialId,
+          ...(transports && transports.length > 0 ? { transports } : {}),
+        }
+      })
     }
   }
 
-  const options = await generateAuthenticationOptions({
+  const authenticationOptions = {
     rpID: rpId(),
     userVerification: 'preferred',
-    allowCredentials,
-  })
+    ...(allowCredentials && allowCredentials.length > 0 ? { allowCredentials } : {}),
+  } as const
+
+  const options = await generateAuthenticationOptions(authenticationOptions)
 
   await storeChallenge(request, {
     type: 'authentication',
@@ -424,17 +474,20 @@ export async function passkeyAuthenticateCompleteHandler(
     throw Errors.UNAUTHORIZED()
   }
 
+  const transports = toAuthenticatorTransports(passkey.transports)
+  const credential: StoredWebAuthnCredential = {
+    id: passkey.credentialId,
+    publicKey: decodeBase64Url(passkey.publicKey),
+    counter: passkey.counter,
+    ...(transports && transports.length > 0 ? { transports } : {}),
+  }
+
   const verification = await verifyAuthenticationResponse({
     response: parsed.credential as never,
     expectedChallenge: challengeState.challenge,
     expectedOrigin: expectedOrigin(),
     expectedRPID: rpId(),
-    authenticator: {
-      credentialID: decodeBase64Url(passkey.credentialId),
-      credentialPublicKey: decodeBase64Url(passkey.publicKey),
-      counter: passkey.counter,
-      transports: passkey.transports,
-    },
+    credential,
     requireUserVerification: true,
   })
 
@@ -442,11 +495,7 @@ export async function passkeyAuthenticateCompleteHandler(
     throw Errors.PASSKEY_VERIFICATION_FAILED()
   }
 
-  const authenticationInfo = verification.authenticationInfo as Record<string, unknown>
-  const newCounter =
-    typeof authenticationInfo.newCounter === 'number'
-      ? authenticationInfo.newCounter
-      : passkey.counter
+  const newCounter = verification.authenticationInfo.newCounter
 
   await request.server.dbAdapter.updatePasskeyCounter(passkey.credentialId, newCounter)
 
@@ -454,15 +503,19 @@ export async function passkeyAuthenticateCompleteHandler(
   const tokenFamily = createTokenFamilyId()
   const expiresAt = new Date(Date.now() + config.sessionDurationSeconds * 1000)
 
-  const session = await request.server.dbAdapter.createSession({
+  const sessionInput = {
     userId: user.id,
     projectId: challengeState.projectId,
     tokenHash: refresh.tokenHash,
     tokenFamily,
     ipAddress: request.ip,
-    userAgent: request.headers['user-agent'] as string | undefined,
     expiresAt,
-  })
+    ...(typeof request.headers['user-agent'] === 'string'
+      ? { userAgent: request.headers['user-agent'] }
+      : {}),
+  }
+
+  const session = await request.server.dbAdapter.createSession(sessionInput)
 
   const accessToken = await issueAccessToken({
     context: {

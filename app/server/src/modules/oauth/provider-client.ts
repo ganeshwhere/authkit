@@ -96,13 +96,26 @@ async function parseTokenResponse(response: Response): Promise<OAuthTokenExchang
       : typeof expiresInRaw === 'string' && expiresInRaw.trim()
         ? Number.parseInt(expiresInRaw, 10)
         : undefined
+  const normalizedExpiresIn: number | null =
+    typeof expiresIn === 'number' && Number.isFinite(expiresIn) ? expiresIn : null
 
-  return {
+  const result: OAuthTokenExchangeResult = {
     accessToken,
-    refreshToken,
-    tokenType,
-    expiresIn: Number.isFinite(expiresIn) ? expiresIn : undefined,
   }
+
+  if (refreshToken) {
+    result.refreshToken = refreshToken
+  }
+
+  if (tokenType) {
+    result.tokenType = tokenType
+  }
+
+  if (normalizedExpiresIn !== null) {
+    result.expiresIn = normalizedExpiresIn
+  }
+
+  return result
 }
 
 export async function exchangeOAuthCode(

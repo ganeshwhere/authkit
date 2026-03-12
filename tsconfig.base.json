@@ -2,8 +2,8 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "lib": ["ES2022"],
     "strict": true,
     "noImplicitAny": true,
@@ -16,6 +16,11 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@authkit/core": ["packages/core/src/index.ts"],
+      "@authkit/react": ["packages/react/src/index.ts"]
+    },
     "declaration": true,
     "sourceMap": true,
     "newLine": "lf"

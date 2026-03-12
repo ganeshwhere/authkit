@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { emitWebhookEvent } from '../src/modules/webhooks/emitter'
+import type { WebhookDeliveryJobPayload } from '../src/modules/webhooks/queue'
 
 describe('webhook emitter', () => {
   it('queues deliveries only for enabled and subscribed endpoints', async () => {
@@ -34,7 +35,13 @@ describe('webhook emitter', () => {
       },
     ])
 
-    const add = vi.fn(async () => undefined)
+    const add = vi.fn<
+      (
+        name: string,
+        payload: WebhookDeliveryJobPayload,
+        options?: Record<string, unknown>,
+      ) => Promise<void>
+    >(async () => undefined)
 
     const server = {
       dbAdapter: {
@@ -57,10 +64,20 @@ describe('webhook emitter', () => {
 
     expect(listWebhookEndpoints).toHaveBeenCalledWith('project_1')
     expect(add).toHaveBeenCalledTimes(1)
-
-    const payload = add.mock.calls[0]?.[1]
-    expect(payload.endpointId).toBe('endpoint_1')
-    expect(payload.event).toBe('user.created')
-    expect(payload.payload.type).toBe('user.created')
+    expect(add).toHaveBeenNthCalledWith(
+      1,
+      'deliver-webhook',
+      expect.objectContaining({
+        endpointId: 'endpoint_1',
+        event: 'user.created',
+        payload: expect.objectContaining({
+          type: 'user.created',
+        }),
+      }),
+      expect.objectContaining({
+        delay: 0,
+        attempts: 1,
+      }),
+    )
   })
 })

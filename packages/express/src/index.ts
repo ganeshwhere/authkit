@@ -113,13 +113,20 @@ export function authKit(config: AuthKitExpressConfig): RequestHandler {
     const token = readBearerToken(request)
 
     if (!token) {
-      request.auth = undefined
+      delete request.auth
       next()
       return
     }
 
     try {
-      request.auth = await resolveAuthContext(config, token) ?? undefined
+      const authContext = await resolveAuthContext(config, token)
+
+      if (authContext) {
+        request.auth = authContext
+      } else {
+        delete request.auth
+      }
+
       next()
     } catch (error) {
       next(error)

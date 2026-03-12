@@ -147,7 +147,9 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     redisUrl: parsed.REDIS_URL,
     jwtPrivateKey: parsed.JWT_PRIVATE_KEY,
     jwtPublicKey: parsed.JWT_PUBLIC_KEY,
-    jwtPublicKeyPrevious: parsed.JWT_PUBLIC_KEY_PREVIOUS,
+    ...(parsed.JWT_PUBLIC_KEY_PREVIOUS
+      ? { jwtPublicKeyPrevious: parsed.JWT_PUBLIC_KEY_PREVIOUS }
+      : {}),
     encryptionKey: parsed.ENCRYPTION_KEY,
     hmacSecret: parsed.HMAC_SECRET,
     sessionDurationSeconds: parsed.SESSION_DURATION_SECONDS,
@@ -156,7 +158,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     passwordResetTtlSeconds: parsed.PASSWORD_RESET_TTL_SECONDS,
     emailVerifyTtlSeconds: parsed.EMAIL_VERIFY_TTL_SECONDS,
     emailFrom: parsed.EMAIL_FROM,
-    smtpUrl: parsed.SMTP_URL,
+    ...(parsed.SMTP_URL ? { smtpUrl: parsed.SMTP_URL } : {}),
     pwnedPasswordsCheck: parsed.PWNED_PASSWORDS_CHECK,
     requireEmailVerification: parsed.REQUIRE_EMAIL_VERIFICATION,
     oauthRedirectAllowlist: parseUrlList(parsed.OAUTH_REDIRECT_ALLOWLIST),

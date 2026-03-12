@@ -143,11 +143,20 @@ export class AuthKitClient {
     session?: Session
   }): void {
     this.tokenStorage.setAccessToken(result.accessToken)
-    this.authStateStore.setAuthenticated({
+    const authState: {
+      user: User
+      accessToken: string
+      session?: Session
+    } = {
       user: result.user,
       accessToken: result.accessToken,
-      session: result.session,
-    })
+    }
+
+    if (result.session) {
+      authState.session = result.session
+    }
+
+    this.authStateStore.setAuthenticated(authState)
   }
 
   private clearAuthState(): void {
@@ -170,12 +179,20 @@ export class AuthKitClient {
       headers['content-type'] = 'application/json'
     }
 
-    const response = await this.fetcher(buildUrl(this.config.baseUrl, options.path, options.query), {
+    const requestInit: RequestInit = {
       method: options.method,
       headers,
-      body: options.body ? JSON.stringify(options.body) : undefined,
       credentials: 'include',
-    })
+    }
+
+    if (options.body) {
+      requestInit.body = JSON.stringify(options.body)
+    }
+
+    const response = await this.fetcher(
+      buildUrl(this.config.baseUrl, options.path, options.query),
+      requestInit,
+    )
 
     const text = await response.text()
     let payload: unknown = { data: null, error: null }

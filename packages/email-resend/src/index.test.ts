@@ -4,7 +4,9 @@ import { createResendAdapter } from './index'
 
 describe('createResendAdapter', () => {
   it('posts email payload to resend api', async () => {
-    const fetchMock = vi.fn(async () => ({ ok: true, status: 200 }))
+    const fetchMock = vi.fn<(input: string, init?: RequestInit) => Promise<{ ok: true; status: number }>>(
+      async () => ({ ok: true, status: 200 }),
+    )
 
     const adapter = createResendAdapter({
       apiKey: 'resend_api_key',
@@ -21,9 +23,11 @@ describe('createResendAdapter', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-
-    const request = fetchMock.mock.calls[0]
-    expect(request?.[0]).toBe('https://api.resend.com/emails')
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://api.resend.com/emails',
+      expect.any(Object),
+    )
   })
 
   it('throws on resend api error', async () => {

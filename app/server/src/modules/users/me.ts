@@ -86,9 +86,9 @@ export async function patchMeHandler(request: FastifyRequest, reply: FastifyRepl
   }
 
   const user = await request.server.dbAdapter.updateUser(auth.pid, auth.sub, {
-    displayName: parsed.displayName,
-    avatarUrl: parsed.avatarUrl,
-    metadata: parsed.metadata,
+    ...(parsed.displayName ? { displayName: parsed.displayName } : {}),
+    ...(parsed.avatarUrl ? { avatarUrl: parsed.avatarUrl } : {}),
+    ...(parsed.metadata ? { metadata: parsed.metadata } : {}),
   })
 
   reply.send({

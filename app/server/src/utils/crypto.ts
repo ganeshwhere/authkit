@@ -95,6 +95,14 @@ export function decrypt(ciphertext: string, key: Buffer): string {
     throw new Error('Invalid ciphertext format')
   }
 
+  for (const part of [ivBase64, payloadBase64, tagBase64]) {
+    const normalized = Buffer.from(part, 'base64url').toString('base64url')
+
+    if (normalized !== part) {
+      throw new Error('Invalid ciphertext encoding')
+    }
+  }
+
   const iv = Buffer.from(ivBase64, 'base64url')
   const payload = Buffer.from(payloadBase64, 'base64url')
   const tag = Buffer.from(tagBase64, 'base64url')

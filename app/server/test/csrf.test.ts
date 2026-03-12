@@ -25,7 +25,8 @@ describe('csrf middleware', () => {
 
     const first = await server.inject({ method: 'GET', url: '/v1/auth/ping' })
     const setCookie = first.headers['set-cookie']
-    const csrfCookie = Array.isArray(setCookie) ? setCookie[0] : setCookie ?? ''
+    const csrfCookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie) ?? ''
+    expect(csrfCookie).toBeTruthy()
     const token = csrfCookie.split(';')[0]?.split('=')[1]
 
     const second = await server.inject({

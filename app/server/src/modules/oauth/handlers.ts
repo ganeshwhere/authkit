@@ -115,9 +115,9 @@ async function resolveOAuthUser(
     user = await request.server.dbAdapter.createUser(data.projectId, {
       email: normalizedEmail,
       emailVerified: data.emailVerified,
-      displayName: data.displayName ?? undefined,
-      avatarUrl: data.avatarUrl ?? undefined,
       metadata: {},
+      ...(data.displayName ? { displayName: data.displayName } : {}),
+      ...(data.avatarUrl ? { avatarUrl: data.avatarUrl } : {}),
     })
   }
 
@@ -225,15 +225,19 @@ export async function oauthCallbackHandler(
   const tokenFamily = createTokenFamilyId()
   const expiresAt = new Date(Date.now() + config.sessionDurationSeconds * 1000)
 
-  const session = await request.server.dbAdapter.createSession({
+  const sessionInput = {
     userId: user.id,
     projectId: state.projectId,
     tokenHash: refresh.tokenHash,
     tokenFamily,
     ipAddress: request.ip,
-    userAgent: request.headers['user-agent'] as string | undefined,
     expiresAt,
-  })
+    ...(typeof request.headers['user-agent'] === 'string'
+      ? { userAgent: request.headers['user-agent'] }
+      : {}),
+  }
+
+  const session = await request.server.dbAdapter.createSession(sessionInput)
 
   const accessToken = await issueAccessToken({
     context: {

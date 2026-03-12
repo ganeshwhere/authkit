@@ -44,6 +44,16 @@ describe('@authkit/express', () => {
       headers: {
         authorization: 'Bearer token_1',
       },
+    } as {
+      headers: {
+        authorization: string
+      }
+      auth?: {
+        token: string
+        user: {
+          email: string
+        }
+      }
     }
 
     await middleware(request as never, {} as never, vi.fn())

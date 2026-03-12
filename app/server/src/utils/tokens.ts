@@ -58,24 +58,87 @@ export function createTokenFamilyId(): string {
   return randomUUID()
 }
 
+function serializeCookie(params: {
+  name: string
+  value: string
+  secure: boolean
+  maxAgeSeconds?: number
+  expires?: Date
+}): string {
+  const parts = [
+    `${params.name}=${params.value}`,
+    'Path=/v1/auth/refresh',
+    'HttpOnly',
+    'SameSite=Strict',
+  ]
+
+  if (params.secure) {
+    parts.push('Secure')
+  }
+
+  if (params.maxAgeSeconds !== undefined) {
+    parts.push(`Max-Age=${params.maxAgeSeconds}`)
+  }
+
+  if (params.expires) {
+    parts.push(`Expires=${params.expires.toUTCString()}`)
+  }
+
+  return parts.join('; ')
+}
+
 export function setRefreshTokenCookie(
   reply: FastifyReply,
   token: string,
   secure = true,
 ): void {
-  reply.setCookie('refresh_token', token, {
-    httpOnly: true,
-    secure,
-    sameSite: 'strict',
-    path: '/v1/auth/refresh',
-  })
+  const cookieReply = reply as FastifyReply & {
+    setCookie?: (name: string, value: string, options: Record<string, unknown>) => void
+  }
+
+  if (typeof cookieReply.setCookie === 'function') {
+    cookieReply.setCookie('refresh_token', token, {
+      httpOnly: true,
+      secure,
+      sameSite: 'strict',
+      path: '/v1/auth/refresh',
+    })
+    return
+  }
+
+  reply.header(
+    'set-cookie',
+    serializeCookie({
+      name: 'refresh_token',
+      value: token,
+      secure,
+    }),
+  )
 }
 
 export function clearRefreshTokenCookie(reply: FastifyReply, secure = true): void {
-  reply.clearCookie('refresh_token', {
-    httpOnly: true,
-    secure,
-    sameSite: 'strict',
-    path: '/v1/auth/refresh',
-  })
+  const cookieReply = reply as FastifyReply & {
+    clearCookie?: (name: string, options: Record<string, unknown>) => void
+  }
+
+  if (typeof cookieReply.clearCookie === 'function') {
+    cookieReply.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure,
+      sameSite: 'strict',
+      path: '/v1/auth/refresh',
+    })
+    return
+  }
+
+  reply.header(
+    'set-cookie',
+    serializeCookie({
+      name: 'refresh_token',
+      value: '',
+      secure,
+      maxAgeSeconds: 0,
+      expires: new Date(0),
+    }),
+  )
 }

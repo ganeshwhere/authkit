@@ -1,5 +1,4 @@
 import { Queue, Worker, type JobsOptions, type Processor, type QueueOptions } from 'bullmq'
-import type Redis from 'ioredis'
 
 import type { EmailTemplateInput, EmailTemplateType } from './templates'
 
@@ -21,11 +20,11 @@ export function emailRetryDelay(attemptsMade: number): number {
 }
 
 export function createEmailQueue(
-  connection: Redis,
+  connection: unknown,
   options: Omit<QueueOptions, 'connection'> = {},
 ): Queue<EmailQueueJobPayload> {
-  return new Queue<EmailQueueJobPayload>(EMAIL_QUEUE_NAME, {
-    connection,
+  return new Queue<EmailQueueJobPayload, void, string>(EMAIL_QUEUE_NAME, {
+    connection: connection as QueueOptions['connection'],
     ...options,
   })
 }
@@ -35,7 +34,6 @@ export function defaultEmailJobOptions(): JobsOptions {
     attempts: 5,
     removeOnComplete: true,
     removeOnFail: 200,
-    timeout: 5000,
     backoff: {
       type: 'custom',
     },
@@ -43,11 +41,11 @@ export function defaultEmailJobOptions(): JobsOptions {
 }
 
 export function createEmailWorker(
-  connection: Redis,
+  connection: unknown,
   processor: Processor<EmailQueueJobPayload>,
 ): Worker<EmailQueueJobPayload> {
   return new Worker<EmailQueueJobPayload>(EMAIL_QUEUE_NAME, processor, {
-    connection,
+    connection: connection as QueueOptions['connection'],
     settings: {
       backoffStrategy: (attemptsMade) => emailRetryDelay(attemptsMade),
     },

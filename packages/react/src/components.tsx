@@ -200,10 +200,16 @@ export function UserProfile(): JSX.Element {
   async function save(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
 
-    await update({
-      displayName,
-      avatarUrl: avatarUrl || undefined,
-    })
+    await update(
+      avatarUrl
+        ? {
+            displayName,
+            avatarUrl,
+          }
+        : {
+            displayName,
+          },
+    )
 
     setMessage('Profile updated.')
   }

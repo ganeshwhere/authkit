@@ -12,11 +12,10 @@ describe('email queue config', () => {
     expect(emailRetryDelay(10)).toBe(1800000)
   })
 
-  it('uses five-attempt default job options with timeout', () => {
+  it('uses five-attempt default job options with custom backoff', () => {
     const options = defaultEmailJobOptions()
 
     expect(options.attempts).toBe(5)
-    expect(options.timeout).toBe(5000)
     expect(options.backoff).toMatchObject({ type: 'custom' })
   })
 })

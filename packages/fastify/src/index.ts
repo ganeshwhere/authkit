@@ -54,7 +54,7 @@ type UserMeResponse = {
 
 declare module 'fastify' {
   interface FastifyRequest {
-    auth?: AuthContext
+    auth: AuthContext | null
   }
 }
 
@@ -108,17 +108,17 @@ async function resolveAuthContext(
 }
 
 const authKitPlugin: FastifyPluginAsync<AuthKitFastifyConfig> = async (server, options) => {
-  server.decorateRequest('auth', undefined)
+  server.decorateRequest('auth', null)
 
   server.addHook('preHandler', async (request) => {
     const token = readBearerToken(request)
 
     if (!token) {
-      request.auth = undefined
+      request.auth = null
       return
     }
 
-    request.auth = (await resolveAuthContext(options, token)) ?? undefined
+    request.auth = (await resolveAuthContext(options, token)) ?? null
   })
 }
 

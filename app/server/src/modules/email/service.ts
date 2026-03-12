@@ -27,14 +27,16 @@ export class EmailService {
   async sendTemplate(input: SendTemplateEmailInput): Promise<void> {
     const rendered = this.render(input.template, input.variables)
 
-    await this.adapter.send({
+    const message: EmailMessage = {
       to: input.to,
       from: input.from ?? this.defaultFrom,
-      replyTo: input.replyTo,
       subject: rendered.subject,
       html: rendered.html,
       text: rendered.text,
-    })
+      ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+    }
+
+    await this.adapter.send(message)
   }
 
   async send(message: EmailMessage): Promise<void> {

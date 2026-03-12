@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import { AuthStateStore } from './session'
+import type { AuthState } from './types'
 
 describe('AuthStateStore', () => {
   it('tracks auth state and notifies listeners', () => {
     const store = new AuthStateStore()
     const observed: Array<{ isSignedIn: boolean; token: string | null }> = []
 
-    const unsubscribe = store.subscribe((state) => {
+    const unsubscribe = store.subscribe((state: AuthState) => {
       observed.push({ isSignedIn: state.isSignedIn, token: state.accessToken })
     })
 
