@@ -2,8 +2,9 @@ import type { QueueOptions, WorkerOptions } from 'bullmq'
 import { Queue, Worker } from 'bullmq'
 
 import type { DatabaseAdapter } from '../../types/adapters'
-import { buildWebhookSignatureHeader } from './signature'
+
 import type { WebhookEventPayload } from './events'
+import { buildWebhookSignatureHeader } from './signature'
 
 export const WEBHOOK_QUEUE_NAME = 'authkit:webhooks:delivery'
 

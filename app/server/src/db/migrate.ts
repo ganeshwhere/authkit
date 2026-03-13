@@ -1,6 +1,7 @@
 import { migrate } from 'drizzle-orm/node-postgres/migrator'
 
 import { config } from '../config'
+
 import { createDatabaseClient } from './index'
 
 async function runMigrations(): Promise<void> {

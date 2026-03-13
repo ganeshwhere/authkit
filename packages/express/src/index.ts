@@ -51,14 +51,6 @@ type UserMeResponse = {
   sessions: AuthenticatedSession[]
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      auth?: AuthContext
-    }
-  }
-}
-
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
 }

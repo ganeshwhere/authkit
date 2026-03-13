@@ -1,7 +1,9 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
+import { Errors } from '../../utils/errors'
 import { requireAccessToken } from '../auth/access'
+
 import {
   createTotpSetup,
   decryptTotpSecret,
@@ -11,7 +13,6 @@ import {
   verifyAndConsumeBackupCode,
   verifyTotpCode,
 } from './totp'
-import { Errors } from '../../utils/errors'
 
 const mfaCodeBodySchema = z.object({
   code: z.string().min(1).max(20),

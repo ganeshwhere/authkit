@@ -4,11 +4,11 @@ import fp from 'fastify-plugin'
 import {
   emitWebhookEvent as emitWebhookEventInternal,
 } from '../modules/webhooks/emitter'
+import type { WebhookEventInput } from '../modules/webhooks/events'
 import {
   createWebhookQueue,
   createWebhookWorker,
 } from '../modules/webhooks/queue'
-import type { WebhookEventInput } from '../modules/webhooks/events'
 
 const webhookQueuePlugin: FastifyPluginAsync = async (server) => {
   const queue = createWebhookQueue(server.redis)

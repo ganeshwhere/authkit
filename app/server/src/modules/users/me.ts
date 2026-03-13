@@ -1,8 +1,8 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
-import { requireAccessToken } from '../auth/access'
 import { AuthKitError, Errors } from '../../utils/errors'
+import { requireAccessToken } from '../auth/access'
 
 const updateMeBodySchema = z.object({
   displayName: z.string().max(100).optional(),

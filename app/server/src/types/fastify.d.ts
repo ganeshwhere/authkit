@@ -1,15 +1,17 @@
 import type { Queue } from 'bullmq'
-import type { Pool } from 'pg'
 import type Redis from 'ioredis'
+import type { Pool } from 'pg'
+
+import type { AuthKitDatabase } from '../db'
+import type { AuditEventInput } from '../modules/audit/emitter'
+import type { EmailQueueJobPayload } from '../modules/email/queue'
+import type { EmailService } from '../modules/email/service'
+import type { WebhookEventInput } from '../modules/webhooks/events'
+import type { WebhookDeliveryJobPayload } from '../modules/webhooks/queue'
 
 import type { DatabaseAdapter } from './adapters'
-import type { AuthKitDatabase } from '../db'
 import type { CacheAdapter, EmailAdapter } from './adapters'
-import type { EmailService } from '../modules/email/service'
-import type { EmailQueueJobPayload } from '../modules/email/queue'
-import type { WebhookDeliveryJobPayload } from '../modules/webhooks/queue'
-import type { WebhookEventInput } from '../modules/webhooks/events'
-import type { AuditEventInput } from '../modules/audit/emitter'
+
 
 declare module 'fastify' {
   interface FastifyInstance {

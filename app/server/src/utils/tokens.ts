@@ -3,6 +3,7 @@ import { randomUUID, type KeyObject } from 'node:crypto'
 import type { FastifyReply } from 'fastify'
 
 import type { AccessTokenPayload } from '../types/auth'
+
 import { generateSecureToken, generateTokenHash, signAccessToken } from './crypto'
 
 export type AccessTokenContext = {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { EmailMessage } from '../src/types/adapters'
 import { EmailService } from '../src/modules/email/service'
+import type { EmailMessage } from '../src/types/adapters'
 
 describe('EmailService', () => {
   it('renders and sends a template message through adapter', async () => {

@@ -1,10 +1,10 @@
-import { inject } from '@angular/core'
 import type {
   HttpEvent,
   HttpHandlerFn,
   HttpInterceptorFn,
   HttpRequest,
 } from '@angular/common/http'
+import { inject } from '@angular/core'
 import {
   from,
   switchMap,

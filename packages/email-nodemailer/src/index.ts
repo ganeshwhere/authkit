@@ -1,6 +1,5 @@
-import nodemailer, { type Transporter } from 'nodemailer'
-
 import type { EmailAdapter, EmailMessage } from '@authkit/core'
+import nodemailer, { type Transporter } from 'nodemailer'
 
 export type NodemailerAdapterOptions = {
   transporter?: Transporter

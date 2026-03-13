@@ -1,9 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
-import { requireAccessToken } from '../auth/access'
-import { parseOAuthProvider } from './providers'
 import { Errors } from '../../utils/errors'
+import { requireAccessToken } from '../auth/access'
+
+import { parseOAuthProvider } from './providers'
 
 const oauthParamsSchema = z.object({
   provider: z.string().min(1),

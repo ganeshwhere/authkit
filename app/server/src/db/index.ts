@@ -2,6 +2,7 @@ import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { Pool, type PoolConfig } from 'pg'
 
 import type { AppConfig } from '../config'
+
 import * as schema from './schema'
 
 export type AuthKitDatabase = NodePgDatabase<typeof schema>

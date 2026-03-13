@@ -5,8 +5,8 @@ import { authenticator } from 'otplib'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { encrypt, generateTokenHash } from '../src/utils/crypto'
-import { issueAccessToken } from '../src/utils/tokens'
 import { globalErrorHandler } from '../src/utils/error-handler'
+import { issueAccessToken } from '../src/utils/tokens'
 
 const keyPair = generateKeyPairSync('rsa', {
   modulusLength: 2048,

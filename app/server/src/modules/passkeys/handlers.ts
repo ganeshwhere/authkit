@@ -1,17 +1,15 @@
 import { createPrivateKey } from 'node:crypto'
 
-import type { FastifyReply, FastifyRequest } from 'fastify'
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
 } from '@simplewebauthn/server'
+import type { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
 import { config } from '../../config'
-import { requireAccessToken } from '../auth/access'
-import { requireProjectIdHeader } from '../management/auth'
 import { Errors } from '../../utils/errors'
 import {
   createTokenFamilyId,
@@ -19,6 +17,8 @@ import {
   issueRefreshToken,
   setRefreshTokenCookie,
 } from '../../utils/tokens'
+import { requireAccessToken } from '../auth/access'
+import { requireProjectIdHeader } from '../management/auth'
 
 const passkeyRegisterCompleteBodySchema = z.object({
   credential: z.record(z.unknown()),

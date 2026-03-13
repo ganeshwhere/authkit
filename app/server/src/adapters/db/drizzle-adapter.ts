@@ -9,7 +9,6 @@ import {
   sql,
 } from 'drizzle-orm'
 
-import type { DatabaseAdapter } from '../../types/adapters'
 import type { AuthKitDatabase } from '../../db'
 import {
   auditLogs,
@@ -23,6 +22,7 @@ import {
   webhookDeliveries,
   webhookEndpoints,
 } from '../../db/schema'
+import type { DatabaseAdapter } from '../../types/adapters'
 import type {
   AuditLog,
   OAuthAccount,

@@ -6,6 +6,12 @@ import {
   magicLinkVerifyHandler,
 } from '../modules/auth/magic-link'
 import { mfaVerifyHandler } from '../modules/auth/mfa-verify'
+import { refreshHandler } from '../modules/auth/refresh'
+import { resetPasswordHandler } from '../modules/auth/reset-password'
+import { signinHandler } from '../modules/auth/signin'
+import { signoutHandler } from '../modules/auth/signout'
+import { signupHandler } from '../modules/auth/signup'
+import { verifyEmailHandler } from '../modules/auth/verify-email'
 import {
   mfaBackupCodesHandler,
   mfaBackupCodesRegenerateHandler,
@@ -13,23 +19,17 @@ import {
   mfaTotpEnableHandler,
   mfaTotpSetupHandler,
 } from '../modules/mfa/handlers'
+import { oauthDisconnectHandler } from '../modules/oauth/disconnect'
 import {
   oauthBeginHandler,
   oauthCallbackHandler,
 } from '../modules/oauth/handlers'
-import { oauthDisconnectHandler } from '../modules/oauth/disconnect'
 import {
   passkeyAuthenticateBeginHandler,
   passkeyAuthenticateCompleteHandler,
   passkeyRegisterBeginHandler,
   passkeyRegisterCompleteHandler,
 } from '../modules/passkeys/handlers'
-import { refreshHandler } from '../modules/auth/refresh'
-import { resetPasswordHandler } from '../modules/auth/reset-password'
-import { signinHandler } from '../modules/auth/signin'
-import { signoutHandler } from '../modules/auth/signout'
-import { signupHandler } from '../modules/auth/signup'
-import { verifyEmailHandler } from '../modules/auth/verify-email'
 
 const authRoutes: FastifyPluginAsync = async (server) => {
   server.post('/signup', signupHandler)

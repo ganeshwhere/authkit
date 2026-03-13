@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import type { DatabaseAdapter } from '../src/types/adapters'
 import { createDrizzleDatabaseAdapter } from '../src/adapters/db/drizzle-adapter'
+import type { DatabaseAdapter } from '../src/types/adapters'
 
 describe('createDrizzleDatabaseAdapter', () => {
   it('returns a database adapter shape', () => {

@@ -1,4 +1,5 @@
 import type { EmailAdapter, EmailMessage } from '../../types/adapters'
+
 import {
   renderEmailTemplate,
   type EmailTemplateInput,

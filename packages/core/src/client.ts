@@ -535,6 +535,7 @@ export class AuthKitClient {
   }
 
   async registerPasskey(_displayName?: string): Promise<void> {
+    void _displayName
     throw new AuthKitError({
       code: 'PASSKEY_BROWSER_FLOW_REQUIRED',
       message: 'Use framework-specific helpers for browser passkey registration flow.',

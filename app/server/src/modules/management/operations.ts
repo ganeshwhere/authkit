@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
 import { AuthKitError } from '../../utils/errors'
+
 import { requireManagementSecret, requireProjectIdHeader } from './auth'
 
 const listSessionsQuerySchema = z.object({

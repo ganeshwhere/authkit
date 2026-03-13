@@ -1,4 +1,3 @@
-import type { FastifyBaseLogger } from 'fastify'
 import type { LoggerOptions } from 'pino'
 
 export function buildLoggerOptions(level: string): LoggerOptions {

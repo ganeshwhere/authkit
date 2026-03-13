@@ -1,5 +1,6 @@
-import { buildServer } from './index'
 import { config } from './config'
+
+import { buildServer } from './index'
 
 const start = async (): Promise<void> => {
   const server = await buildServer()

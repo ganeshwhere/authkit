@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import { useAuth, useAuthKit, useUser } from './hooks'
 import { useMFA, useSignIn, useSignUp } from './headless'
+import { useAuth, useAuthKit, useUser } from './hooks'
 
 export function SignIn(): JSX.Element {
   const [email, setEmail] = useState('')
