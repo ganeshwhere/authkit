@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["vitest.config.mts", "vitest.setup.ts"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
